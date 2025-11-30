@@ -6,6 +6,7 @@ interface OnboardingState {
     currentStep: number;
     totalSteps: number;
     profile: UserProfile;
+    _hasHydrated: boolean;
 
     setStep: (step: number) => void;
     nextStep: () => void;
@@ -14,6 +15,7 @@ interface OnboardingState {
     addChild: (child: ChildProfile) => void;
     removeChild: (id: string) => void;
     reset: () => void;
+    setHasHydrated: (state: boolean) => void;
 }
 
 const initialProfile: UserProfile = {
@@ -44,6 +46,7 @@ export const useOnboardingStore = create<OnboardingState>()(
             currentStep: 0,
             totalSteps: 7,
             profile: initialProfile,
+            _hasHydrated: false,
 
             setStep: (step) => set({ currentStep: step }),
 
@@ -81,9 +84,13 @@ export const useOnboardingStore = create<OnboardingState>()(
                 })),
 
             reset: () => set({ currentStep: 0, profile: initialProfile }),
+            setHasHydrated: (state) => set({ _hasHydrated: state }),
         }),
         {
             name: 'vitality-onboarding',
+            onRehydrateStorage: () => (state) => {
+                state?.setHasHydrated(true);
+            },
         }
     )
 );
