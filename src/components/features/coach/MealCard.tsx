@@ -29,17 +29,24 @@ interface MealProps {
 }
 
 export function MealCard({ meal, showImages = false }: MealProps) {
+    // Safety check
+    if (!meal) {
+        return null;
+    }
+
     const [isExpanded, setIsExpanded] = useState(false);
     const [showRating, setShowRating] = useState(false);
     const [rating, setRating] = useState(0);
     const [comment, setComment] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [localImageUrl, setLocalImageUrl] = useState(meal.imageUrl);
+    const [localImageUrl, setLocalImageUrl] = useState(meal?.imageUrl);
     const [isGeneratingImage, setIsGeneratingImage] = useState(false);
     
     // État pour les détails chargés à la demande
     const [recipeDetails, setRecipeDetails] = useState<{ ingredients: string[]; instructions: string[] } | null>(
-        meal.ingredients && meal.instructions ? { ingredients: meal.ingredients, instructions: meal.instructions } : null
+        meal && meal.ingredients && Array.isArray(meal.ingredients) && meal.instructions && Array.isArray(meal.instructions)
+            ? { ingredients: meal.ingredients, instructions: meal.instructions }
+            : null
     );
     const [isLoadingDetails, setIsLoadingDetails] = useState(false);
 

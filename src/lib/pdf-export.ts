@@ -66,32 +66,35 @@ export function exportWeeklyPlanToPDF(weeklyPlan: any, shoppingList?: any) {
             doc.setFontSize(9);
             doc.setTextColor(100);
 
-            // Ingredients
-            doc.text('Ingrédients:', 20, yPos);
-            yPos += 5;
-            meal.ingredients.forEach((ing: string) => {
-                if (yPos > 280) {
-                    doc.addPage();
-                    yPos = 20;
-                }
-                doc.text(`• ${ing}`, 25, yPos);
-                yPos += 4;
-            });
+            // Ingredients (only if available)
+            if (meal.ingredients && Array.isArray(meal.ingredients) && meal.ingredients.length > 0) {
+                doc.text('Ingrédients:', 20, yPos);
+                yPos += 5;
+                meal.ingredients.forEach((ing: string) => {
+                    if (yPos > 280) {
+                        doc.addPage();
+                        yPos = 20;
+                    }
+                    doc.text(`• ${ing}`, 25, yPos);
+                    yPos += 4;
+                });
+                yPos += 3;
+            }
 
-            yPos += 3;
-
-            // Instructions
-            doc.text('Instructions:', 20, yPos);
-            yPos += 5;
-            meal.instructions.forEach((inst: string, idx: number) => {
-                if (yPos > 280) {
-                    doc.addPage();
-                    yPos = 20;
-                }
-                const lines = doc.splitTextToSize(`${idx + 1}. ${inst}`, 170);
-                doc.text(lines, 25, yPos);
-                yPos += lines.length * 4;
-            });
+            // Instructions (only if available)
+            if (meal.instructions && Array.isArray(meal.instructions) && meal.instructions.length > 0) {
+                doc.text('Instructions:', 20, yPos);
+                yPos += 5;
+                meal.instructions.forEach((inst: string, idx: number) => {
+                    if (yPos > 280) {
+                        doc.addPage();
+                        yPos = 20;
+                    }
+                    const lines = doc.splitTextToSize(`${idx + 1}. ${inst}`, 170);
+                    doc.text(lines, 25, yPos);
+                    yPos += lines.length * 4;
+                });
+            }
 
             yPos += 5;
         });
