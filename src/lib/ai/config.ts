@@ -1,4 +1,4 @@
-import { VertexAI, GoogleAuthOptions } from "@google-cloud/vertexai";
+import { VertexAI } from "@google-cloud/vertexai";
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -9,8 +9,17 @@ if (!projectId) {
     throw new Error("Missing GOOGLE_CLOUD_PROJECT environment variable");
 }
 
+// Type for auth options
+interface AuthCredentials {
+    credentials?: {
+        client_email: string;
+        private_key: string;
+    };
+    projectId?: string;
+}
+
 // Configure authentication
-let authOptions: GoogleAuthOptions | undefined;
+let authOptions: AuthCredentials | undefined;
 
 // Priority 1: Service Account JSON directly in env (for Railway/production)
 if (process.env.GOOGLE_SERVICE_ACCOUNT_KEY) {
@@ -58,7 +67,7 @@ else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
 const vertexAI = new VertexAI({ 
     project: projectId, 
     location: location,
-    googleAuthOptions: authOptions,
+    googleAuthOptions: authOptions as any,
 });
 
 // Using Gemini 2.0 Flash (stable version with higher quotas)
