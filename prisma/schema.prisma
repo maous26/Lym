@@ -186,6 +186,60 @@ model MealHistory {
   @@index([userId, liked])
 }
 
+// ==========================================
+// SUIVI DU POIDS ET WEARABLES
+// ==========================================
+
+model WeightEntry {
+  id        String   @id @default(uuid())
+  
+  userId    String   @default("default")
+  
+  weight    Float    // Poids en kg
+  bodyFat   Float?   // % de masse grasse (si disponible)
+  muscleMass Float?  // % de masse musculaire (si disponible)
+  waterPercentage Float? // % d'eau (si disponible)
+  bmi       Float?   // IMC calculé
+  
+  // Source de la mesure
+  source    String   @default("manual") // "manual", "apple_health", "google_fit", "withings", "xiaomi", etc.
+  deviceName String? // Nom de l'appareil connecté
+  
+  // Métadonnées
+  notes     String?
+  measuredAt DateTime @default(now()) // Date/heure de la mesure
+  
+  createdAt DateTime @default(now())
+  
+  @@index([userId, measuredAt])
+  @@index([userId, source])
+}
+
+model ConnectedDevice {
+  id        String   @id @default(uuid())
+  
+  userId    String   @default("default")
+  
+  // Infos de l'appareil
+  deviceType    String  // "scale", "watch", "band"
+  deviceBrand   String  // "withings", "xiaomi", "apple", "garmin", etc.
+  deviceName    String  // Nom personnalisé ou modèle
+  
+  // Connexion
+  platform      String  // "apple_health", "google_fit", "direct_api"
+  isConnected   Boolean @default(true)
+  lastSyncAt    DateTime?
+  
+  // Permissions
+  permissions   String? // JSON: ["weight", "body_fat", "steps", etc.]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([userId, deviceType, deviceBrand])
+  @@index([userId])
+}
+
 // Repas validés/modifiés par l'utilisateur
 model ValidatedMeal {
   id        String   @id @default(uuid())

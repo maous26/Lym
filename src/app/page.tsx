@@ -9,6 +9,7 @@ import { MonthlyStats } from '@/components/features/dashboard/MonthlyStats';
 import { MacroBreakdown } from '@/components/features/dashboard/MacroBreakdown';
 import { AIInsights } from '@/components/features/dashboard/AIInsights';
 import { CommunityWidget } from '@/components/features/dashboard/CommunityWidget';
+import { WeightQuickCard } from '@/components/features/dashboard/WeightQuickCard';
 import { Loader2 } from 'lucide-react';
 
 export default function Home() {
@@ -52,6 +53,9 @@ export default function Home() {
       <div className="container mx-auto px-4 max-w-md pt-8">
         {/* Personalized Greeting */}
         <PersonalizedMessage />
+
+        {/* Weight Quick Access */}
+        <WeightQuickCard />
 
         {/* Community Widget */}
         <CommunityWidget />
