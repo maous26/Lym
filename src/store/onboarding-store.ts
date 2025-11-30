@@ -38,6 +38,8 @@ const initialProfile: UserProfile = {
     cookingTimeWeekday: 30,
     cookingTimeWeekend: 60,
     fastingSchedule: { type: 'none' },
+    weeklyBudget: undefined,
+    pricePreference: 'balanced',
 };
 
 export const useOnboardingStore = create<OnboardingState>()(

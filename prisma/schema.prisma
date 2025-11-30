@@ -185,3 +185,39 @@ model MealHistory {
   @@index([userId, mealType])
   @@index([userId, liked])
 }
+
+// Repas validés/modifiés par l'utilisateur
+model ValidatedMeal {
+  id        String   @id @default(uuid())
+  
+  userId    String   @default("default")
+  recipeId  String?
+  
+  // Infos du repas
+  mealName    String
+  mealType    String     // "breakfast", "lunch", "dinner", "snack"
+  description String?
+  
+  // Macros
+  calories  Int
+  proteins  Int
+  carbs     Int
+  fats      Int
+  prepTime  Int?
+  
+  // Statut et dates
+  status        String     // "validated", "skipped", "moved"
+  originalDate  DateTime   // Date prévue initialement
+  actualDate    DateTime?  // Date réelle (si déplacé ou validé)
+  
+  // Contexte du plan
+  mealPlanId    String?
+  dayIndex      Int?       // Index du jour dans le plan (0-6)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([userId, actualDate])
+  @@index([userId, status])
+  @@index([mealPlanId])
+}

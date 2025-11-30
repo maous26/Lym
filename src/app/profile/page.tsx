@@ -5,7 +5,7 @@ import { BottomNav } from '@/components/ui/BottomNav';
 import { motion } from 'framer-motion';
 import { 
     User, Calendar, Ruler, Weight, Target, Activity, Utensils, LogOut,
-    ChefHat, Clock, Timer, TrendingDown, Heart, Scale
+    ChefHat, Clock, Timer, TrendingDown, Heart, Scale, Wallet, Euro
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -79,6 +79,15 @@ const formatFasting = (type: string | undefined): string => {
     return type ? types[type] || type : 'Non';
 };
 
+const formatPricePreference = (pref: string | undefined): string => {
+    const prefs: Record<string, string> = {
+        'economy': 'Économique',
+        'balanced': 'Équilibré',
+        'premium': 'Premium'
+    };
+    return pref ? prefs[pref] || pref : 'Équilibré';
+};
+
 export default function ProfilePage() {
     const { profile, reset } = useOnboardingStore();
     const router = useRouter();
@@ -126,6 +135,8 @@ export default function ProfilePage() {
         { icon: ChefHat, label: 'Niveau en cuisine', value: formatCookingSkill(profile.cookingSkillLevel) },
         { icon: Clock, label: 'Temps cuisine (semaine)', value: profile.cookingTimeWeekday ? `${profile.cookingTimeWeekday} min` : '-' },
         { icon: Clock, label: 'Temps cuisine (weekend)', value: profile.cookingTimeWeekend ? `${profile.cookingTimeWeekend} min` : '-' },
+        { icon: Wallet, label: 'Budget hebdo', value: profile.weeklyBudget ? `${profile.weeklyBudget}€` : '-' },
+        { icon: Euro, label: 'Gamme de prix', value: formatPricePreference(profile.pricePreference) },
     ];
 
     return (

@@ -2,33 +2,49 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import { ChefHat, ChevronRight, Clock, Flame, Heart, Star, MessageSquare, ImageIcon, Loader2 } from 'lucide-react';
+import { ChefHat, ChevronRight, Clock, Flame, Heart, Star, MessageSquare, ImageIcon, Loader2, Check, X, CalendarDays, MoreVertical } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { rateRecipe } from '@/app/actions/ratings';
 import { generateFoodImage } from '@/app/actions/ai';
 import { updateRecipeImage, getRecipeDetails } from '@/app/actions/recipes';
+import { validateMeal, skipMeal, moveMeal } from '@/app/actions/meal-actions';
 
-interface MealProps {
-    meal: {
-        type: string;
-        name: string;
-        description: string;
-        ingredients?: string[]; // Optionnel - chargé à la demande
-        instructions?: string[]; // Optionnel - chargé à la demande
-        calories: number;
-        proteins: number;
-        carbs: number;
-        fats: number;
-        prepTime: number;
-        imageUrl?: string | null;
-        isCheatMeal?: boolean;
-        recipeId?: string;
-        isFasting?: boolean;
-    };
-    showImages?: boolean;
+export interface MealData {
+    type: string;
+    name: string;
+    description: string;
+    ingredients?: string[];
+    instructions?: string[];
+    calories: number;
+    proteins: number;
+    carbs: number;
+    fats: number;
+    prepTime: number;
+    imageUrl?: string | null;
+    isCheatMeal?: boolean;
+    recipeId?: string;
+    isFasting?: boolean;
 }
 
-export function MealCard({ meal, showImages = false }: MealProps) {
+interface MealProps {
+    meal: MealData;
+    showImages?: boolean;
+    showActions?: boolean;
+    mealDate?: Date;
+    dayIndex?: number;
+    mealPlanId?: string;
+    onMealStatusChange?: (status: 'validated' | 'skipped' | 'moved', mealId: string) => void;
+}
+
+export function MealCard({ 
+    meal, 
+    showImages = false,
+    showActions = false,
+    mealDate,
+    dayIndex,
+    mealPlanId,
+    onMealStatusChange,
+}: MealProps) {
     // Safety check
     if (!meal) {
         return null;
@@ -41,6 +57,12 @@ export function MealCard({ meal, showImages = false }: MealProps) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [localImageUrl, setLocalImageUrl] = useState(meal?.imageUrl);
     const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+    
+    // États pour les actions
+    const [showActionsMenu, setShowActionsMenu] = useState(false);
+    const [mealStatus, setMealStatus] = useState<'pending' | 'validated' | 'skipped' | 'moved'>('pending');
+    const [isProcessingAction, setIsProcessingAction] = useState(false);
+    const [showDatePicker, setShowDatePicker] = useState(false);
     
     // État pour les détails chargés à la demande
     const [recipeDetails, setRecipeDetails] = useState<{ ingredients: string[]; instructions: string[] } | null>(
@@ -96,6 +118,131 @@ export function MealCard({ meal, showImages = false }: MealProps) {
         }
     };
 
+    // Handlers pour les actions de repas
+    const handleValidateMeal = async () => {
+        if (isProcessingAction) return;
+        setIsProcessingAction(true);
+        
+        try {
+            const mealData = {
+                mealName: meal.name,
+                mealType: meal.type,
+                description: meal.description,
+                calories: meal.calories,
+                proteins: meal.proteins,
+                carbs: meal.carbs,
+                fats: meal.fats,
+                prepTime: meal.prepTime,
+                recipeId: meal.recipeId,
+            };
+            
+            const result = await validateMeal(
+                mealData,
+                mealDate || new Date(),
+                mealPlanId,
+                dayIndex
+            );
+            
+            if (result.success) {
+                setMealStatus('validated');
+                setShowActionsMenu(false);
+                onMealStatusChange?.('validated', result.mealId!);
+            }
+        } catch (error) {
+            console.error('Error validating meal:', error);
+        } finally {
+            setIsProcessingAction(false);
+        }
+    };
+
+    const handleSkipMeal = async () => {
+        if (isProcessingAction) return;
+        setIsProcessingAction(true);
+        
+        try {
+            const mealData = {
+                mealName: meal.name,
+                mealType: meal.type,
+                description: meal.description,
+                calories: meal.calories,
+                proteins: meal.proteins,
+                carbs: meal.carbs,
+                fats: meal.fats,
+                prepTime: meal.prepTime,
+                recipeId: meal.recipeId,
+            };
+            
+            const result = await skipMeal(
+                mealData,
+                mealDate || new Date(),
+                mealPlanId,
+                dayIndex
+            );
+            
+            if (result.success) {
+                setMealStatus('skipped');
+                setShowActionsMenu(false);
+                onMealStatusChange?.('skipped', result.mealId!);
+            }
+        } catch (error) {
+            console.error('Error skipping meal:', error);
+        } finally {
+            setIsProcessingAction(false);
+        }
+    };
+
+    const handleMoveMeal = async (newDate: Date) => {
+        if (isProcessingAction) return;
+        setIsProcessingAction(true);
+        
+        try {
+            const mealData = {
+                mealName: meal.name,
+                mealType: meal.type,
+                description: meal.description,
+                calories: meal.calories,
+                proteins: meal.proteins,
+                carbs: meal.carbs,
+                fats: meal.fats,
+                prepTime: meal.prepTime,
+                recipeId: meal.recipeId,
+            };
+            
+            const result = await moveMeal(
+                mealData,
+                mealDate || new Date(),
+                newDate,
+                mealPlanId,
+                dayIndex
+            );
+            
+            if (result.success) {
+                setMealStatus('moved');
+                setShowActionsMenu(false);
+                setShowDatePicker(false);
+                onMealStatusChange?.('moved', result.mealId!);
+            }
+        } catch (error) {
+            console.error('Error moving meal:', error);
+        } finally {
+            setIsProcessingAction(false);
+        }
+    };
+
+    // Statut du repas pour le style
+    const getStatusStyle = () => {
+        switch (mealStatus) {
+            case 'validated':
+                return 'ring-2 ring-green-500 bg-green-50';
+            case 'skipped':
+                return 'opacity-50 bg-gray-100';
+            case 'moved':
+                return 'ring-2 ring-blue-500 bg-blue-50';
+            default:
+                return '';
+        }
+    };
+
     // Cheat Meal Styling
     const cardStyle = meal.isCheatMeal
         ? 'bg-gradient-to-br from-orange-50 to-red-50 border-orange-200 relative overflow-hidden'
@@ -104,7 +251,20 @@ export function MealCard({ meal, showImages = false }: MealProps) {
     const typeColor = meal.isCheatMeal ? 'text-orange-600' : 'text-emerald-600';
 
     return (
-        <div className={`rounded-2xl p-4 shadow-sm border transition-shadow hover:shadow-md ${cardStyle}`}>
+        <div className={`rounded-2xl p-4 shadow-sm border transition-all hover:shadow-md ${cardStyle} ${getStatusStyle()}`}>
+            {/* Status Badge */}
+            {mealStatus !== 'pending' && (
+                <div className={`absolute top-0 left-0 text-white text-[10px] font-bold px-2 py-1 rounded-br-xl z-10 ${
+                    mealStatus === 'validated' ? 'bg-green-500' :
+                    mealStatus === 'skipped' ? 'bg-gray-500' :
+                    'bg-blue-500'
+                }`}>
+                    {mealStatus === 'validated' ? '✓ VALIDÉ' :
+                     mealStatus === 'skipped' ? '✗ SAUTÉ' :
+                     '📅 DÉPLACÉ'}
+                </div>
+            )}
+            
             {meal.isCheatMeal && (
                 <div className="absolute top-0 right-0 bg-orange-500 text-white text-[10px] font-bold px-2 py-1 rounded-bl-xl z-10">
                     CHEAT MEAL
@@ -182,7 +342,38 @@ export function MealCard({ meal, showImages = false }: MealProps) {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex gap-2 mt-3">
+            <div className="flex gap-2 mt-3 flex-wrap">
+                {/* Meal Actions (Validate/Skip/Move) */}
+                {showActions && mealStatus === 'pending' && !meal.isFasting && (
+                    <>
+                        <button
+                            onClick={handleValidateMeal}
+                            disabled={isProcessingAction}
+                            className="flex items-center gap-1 text-xs font-medium text-white bg-green-500 hover:bg-green-600 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+                        >
+                            {isProcessingAction ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                            Valider
+                        </button>
+                        <button
+                            onClick={handleSkipMeal}
+                            disabled={isProcessingAction}
+                            className="flex items-center gap-1 text-xs font-medium text-white bg-gray-400 hover:bg-gray-500 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+                        >
+                            <X size={14} />
+                            Sauter
+                        </button>
+                        <button
+                            onClick={() => setShowDatePicker(!showDatePicker)}
+                            disabled={isProcessingAction}
+                            className="flex items-center gap-1 text-xs font-medium text-white bg-blue-500 hover:bg-blue-600 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+                        >
+                            <CalendarDays size={14} />
+                            Déplacer
+                        </button>
+                    </>
+                )}
+                
+                {/* Rating Button */}
                 <button
                     onClick={() => setShowRating(!showRating)}
                     className="flex items-center gap-1 text-xs font-medium text-gray-600 hover:text-emerald-600 bg-gray-50 hover:bg-emerald-50 px-3 py-1.5 rounded-lg transition-colors"
@@ -191,6 +382,50 @@ export function MealCard({ meal, showImages = false }: MealProps) {
                     Noter
                 </button>
             </div>
+
+            {/* Date Picker for Moving Meal */}
+            <AnimatePresence>
+                {showDatePicker && (
+                    <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="overflow-hidden"
+                    >
+                        <div className="mt-3 p-3 bg-blue-50 rounded-xl">
+                            <label className="text-xs font-medium text-blue-700 mb-2 block">
+                                Déplacer ce repas vers :
+                            </label>
+                            <div className="flex gap-2 flex-wrap">
+                                {[...Array(7)].map((_, i) => {
+                                    const date = new Date();
+                                    date.setDate(date.getDate() + i);
+                                    const dayName = date.toLocaleDateString('fr-FR', { weekday: 'short' });
+                                    const dayNum = date.getDate();
+                                    
+                                    return (
+                                        <button
+                                            key={i}
+                                            onClick={() => handleMoveMeal(date)}
+                                            disabled={isProcessingAction}
+                                            className="flex flex-col items-center px-3 py-2 bg-white hover:bg-blue-100 rounded-lg border border-blue-200 transition-colors disabled:opacity-50"
+                                        >
+                                            <span className="text-xs text-blue-600 capitalize">{dayName}</span>
+                                            <span className="text-sm font-bold text-blue-800">{dayNum}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            <button
+                                onClick={() => setShowDatePicker(false)}
+                                className="mt-2 text-xs text-blue-600 hover:underline"
+                            >
+                                Annuler
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Rating Section */}
             <AnimatePresence>

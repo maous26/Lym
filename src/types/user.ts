@@ -64,4 +64,8 @@ export interface UserProfile {
     
     // Jeûne intermittent
     fastingSchedule?: FastingSchedule;
+    
+    // Budget courses
+    weeklyBudget?: number; // Budget courses hebdomadaire en €
+    pricePreference?: 'economy' | 'balanced' | 'premium'; // Gamme de prix préférée
 }

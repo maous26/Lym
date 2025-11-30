@@ -24,6 +24,8 @@ interface OnboardingProfile {
     weightLossGoalKg?: number;
     suggestedDurationWeeks?: number;
     fastingSchedule?: FastingSchedule;
+    weeklyBudget?: number;
+    pricePreference?: 'economy' | 'balanced' | 'premium';
 }
 
 /**
@@ -170,6 +172,10 @@ ${fastingInfo.description ? `- Détail: ${fastingInfo.description}` : ''}
 - Temps disponible (semaine): ${profile.cookingTimeWeekday || 30} minutes
 - Temps disponible (weekend): ${profile.cookingTimeWeekend || 60} minutes
 
+💰 BUDGET COURSES:
+- Budget hebdomadaire: ${profile.weeklyBudget ? `${profile.weeklyBudget}€` : 'Non défini'}
+- Gamme de prix: ${translatePricePreference(profile.pricePreference)}
+
 ADAPTATIONS NÉCESSAIRES:
 ─────────────────────────────
 ${generateAdaptations(profile, fastingInfo)}
@@ -205,6 +211,15 @@ function translateCookingSkill(skill: string | undefined): string {
         'advanced': 'Avancé'
     };
     return skills[skill || ''] || 'Non défini';
+}
+
+function translatePricePreference(pref: string | undefined): string {
+    const prefs: Record<string, string> = {
+        'economy': 'Économique (premier prix)',
+        'balanced': 'Équilibré (rapport qualité/prix)',
+        'premium': 'Premium (bio, qualité)'
+    };
+    return prefs[pref || ''] || 'Équilibré';
 }
 
 function generateAdaptations(profile: OnboardingProfile, fastingInfo: { label: string; description: string }): string {
@@ -257,6 +272,26 @@ function generateAdaptations(profile: OnboardingProfile, fastingInfo: { label: s
     
     if (profile.dietaryPreferences && profile.dietaryPreferences !== 'omnivore') {
         adaptations.push(`• Respecter le régime ${profile.dietaryPreferences} dans toutes les suggestions`);
+    }
+    
+    // Adaptations pour le budget
+    if (profile.weeklyBudget) {
+        if (profile.weeklyBudget < 60) {
+            adaptations.push('• BUDGET SERRÉ: Privilégier les ingrédients économiques (légumineuses, œufs, légumes de saison)');
+            adaptations.push('• Éviter les produits transformés coûteux et les viandes chères');
+            adaptations.push('• Proposer des recettes qui peuvent être préparées en grande quantité');
+        } else if (profile.weeklyBudget < 120) {
+            adaptations.push('• BUDGET MOYEN: Bon équilibre qualité/prix');
+            adaptations.push('• Alterner protéines animales et végétales');
+        } else if (profile.weeklyBudget >= 200) {
+            adaptations.push('• BUDGET CONFORTABLE: Possibilité d\'inclure des produits bio et de qualité');
+        }
+    }
+    
+    if (profile.pricePreference === 'economy') {
+        adaptations.push('• Préférence économique: Privilégier les marques distributeur et premiers prix');
+    } else if (profile.pricePreference === 'premium') {
+        adaptations.push('• Préférence premium: Favoriser les produits bio, label rouge, AOC');
     }
     
     return adaptations.length > 0 ? adaptations.join('\n') : '• Pas d\'adaptation particulière requise';

@@ -22,6 +22,8 @@ export function EnhancedMealPlanGenerator() {
     const [activeDay, setActiveDay] = useState(0);
     const [regeneratingDay, setRegeneratingDay] = useState<number | null>(null);
     const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+    const [planStartDate] = useState(() => new Date()); // Date de début du plan
+    const [mealStatuses, setMealStatuses] = useState<Record<string, 'validated' | 'skipped' | 'moved'>>({});
 
     // Filters
     const [dietType, setDietType] = useState<string>(profile.dietaryPreferences || 'balanced');
@@ -388,9 +390,29 @@ export function EnhancedMealPlanGenerator() {
                                 </div>
 
                                 <div className="grid gap-4">
-                                    {weeklyPlan.days[activeDay].meals.map((meal: any, idx: number) => (
-                                        <MealCard key={idx} meal={meal} showImages={showImages} />
-                                    ))}
+                                    {weeklyPlan.days[activeDay].meals.map((meal: any, idx: number) => {
+                                        // Calculer la date du jour actif
+                                        const mealDate = new Date(planStartDate);
+                                        mealDate.setDate(mealDate.getDate() + activeDay);
+                                        
+                                        return (
+                                            <MealCard 
+                                                key={`${activeDay}-${idx}`} 
+                                                meal={meal} 
+                                                showImages={showImages}
+                                                showActions={true}
+                                                mealDate={mealDate}
+                                                dayIndex={activeDay}
+                                                mealPlanId={mealPlanId || undefined}
+                                                onMealStatusChange={(status, mealId) => {
+                                                    setMealStatuses(prev => ({
+                                                        ...prev,
+                                                        [`${activeDay}-${idx}`]: status,
+                                                    }));
+                                                }}
+                                            />
+                                        );
+                                    })}
                                 </div>
                             </motion.div>
                         </AnimatePresence>
