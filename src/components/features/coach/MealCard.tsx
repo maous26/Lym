@@ -28,7 +28,7 @@ interface MealProps {
     showImages?: boolean;
 }
 
-export function MealCard({ meal, showImages = true }: MealProps) {
+export function MealCard({ meal, showImages = false }: MealProps) {
     const [isExpanded, setIsExpanded] = useState(false);
     const [showRating, setShowRating] = useState(false);
     const [rating, setRating] = useState(0);
