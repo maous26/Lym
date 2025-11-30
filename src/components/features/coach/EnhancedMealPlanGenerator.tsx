@@ -56,13 +56,13 @@ export function EnhancedMealPlanGenerator() {
 
             if (result.success && result.plan) {
                 setWeeklyPlan(result.plan);
-                
+
                 // Sauvegarder une version légère du plan pour le feedback ML
                 // (sans les instructions et ingrédients détaillés pour éviter de dépasser la limite)
                 const today = new Date();
                 const endDate = new Date(today);
                 endDate.setDate(endDate.getDate() + 7);
-                
+
                 // Créer une version simplifiée du plan
                 const lightPlanData = {
                     days: result.plan.days.map((day: any) => ({
@@ -77,7 +77,7 @@ export function EnhancedMealPlanGenerator() {
                         })),
                     })),
                 };
-                
+
                 const saveResult = await saveMealPlan({
                     startDate: today,
                     endDate: endDate,
@@ -86,7 +86,7 @@ export function EnhancedMealPlanGenerator() {
                     targetCalories: dailyCalories,
                     dietType: dietType,
                 });
-                
+
                 if (saveResult.success && saveResult.mealPlanId) {
                     setMealPlanId(saveResult.mealPlanId);
                 }
@@ -97,7 +97,7 @@ export function EnhancedMealPlanGenerator() {
             setIsGenerating(false);
         }
     };
-    
+
     // Régénérer un jour spécifique
     const handleRegenerateDay = async (dayIndex: number) => {
         if (!weeklyPlan) return;
@@ -247,22 +247,6 @@ export function EnhancedMealPlanGenerator() {
                                                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
                                             </label>
                                         </div>
-
-                                        {/* Show Images Toggle */}
-                                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-sm font-medium text-gray-700">Afficher les photos</span>
-                                            </div>
-                                            <label className="relative inline-flex items-center cursor-pointer">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={showImages}
-                                                    onChange={(e) => setShowImages(e.target.checked)}
-                                                    className="sr-only peer"
-                                                />
-                                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
-                                            </label>
-                                        </div>
                                     </motion.div>
                                 )}
                             </AnimatePresence>
@@ -400,7 +384,7 @@ export function EnhancedMealPlanGenerator() {
                                 </div>
                             </motion.div>
                         </AnimatePresence>
-                        
+
                         {/* Feedback Section */}
                         {mealPlanId && (
                             <motion.div
@@ -431,7 +415,7 @@ export function EnhancedMealPlanGenerator() {
                     </div>
                 )}
             </div>
-            
+
             {/* Feedback Modal */}
             {mealPlanId && (
                 <MealPlanFeedbackModal
