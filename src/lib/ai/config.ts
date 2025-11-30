@@ -1,12 +1,18 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { VertexAI } from "@google-cloud/vertexai";
 
-if (!process.env.GOOGLE_AI_API_KEY) {
-    throw new Error("Missing GOOGLE_AI_API_KEY environment variable");
+const projectId = process.env.GOOGLE_CLOUD_PROJECT;
+const location = process.env.GOOGLE_CLOUD_LOCATION || 'us-central1';
+
+if (!projectId) {
+    throw new Error("Missing GOOGLE_CLOUD_PROJECT environment variable");
 }
 
-export const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY);
+// Initialize Vertex AI
+const vertexAI = new VertexAI({ project: projectId, location: location });
 
+// Using Gemini 2.0 Flash via Vertex AI (higher quotas with billing)
 export const models = {
-    flash: genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" }),
-    pro: genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" }),
+    flash: vertexAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" }),
+    pro: vertexAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" }),
 };
+
