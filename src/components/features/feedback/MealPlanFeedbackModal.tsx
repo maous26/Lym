@@ -98,7 +98,7 @@ export function MealPlanFeedbackModal({ isOpen, onClose, mealPlanId, planDays }:
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4"
+                    className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 pb-24"
                     onClick={onClose}
                 >
                     <motion.div
@@ -106,7 +106,7 @@ export function MealPlanFeedbackModal({ isOpen, onClose, mealPlanId, planDays }:
                         animate={{ y: 0, opacity: 1 }}
                         exit={{ y: 100, opacity: 0 }}
                         onClick={(e) => e.stopPropagation()}
-                        className="bg-white rounded-t-3xl sm:rounded-3xl w-full max-w-md max-h-[85vh] overflow-y-auto"
+                        className="bg-white rounded-3xl w-full max-w-md max-h-[70vh] overflow-y-auto shadow-2xl"
                     >
                         {submitted ? (
                             <div className="p-8 text-center">
@@ -257,13 +257,13 @@ export function MealPlanFeedbackModal({ isOpen, onClose, mealPlanId, planDays }:
                                             value={comment}
                                             onChange={(e) => setComment(e.target.value)}
                                             placeholder="Ex: Plus de légumes, moins de viande rouge, recettes plus rapides..."
-                                            className="w-full p-3 border border-gray-200 rounded-xl resize-none h-24 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                            className="w-full p-3 border border-gray-200 rounded-xl resize-none h-24 focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white text-gray-900 placeholder:text-gray-400"
                                         />
                                     </div>
                                 </div>
 
                                 {/* Submit Button */}
-                                <div className="sticky bottom-0 bg-white p-4 border-t">
+                                <div className="bg-white p-4 pb-8 border-t">
                                     <button
                                         onClick={handleSubmit}
                                         disabled={rating === 0 || isSubmitting}
