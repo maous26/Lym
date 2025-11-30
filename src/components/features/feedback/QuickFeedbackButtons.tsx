@@ -95,3 +95,4 @@ export function QuickFeedbackButtons({ recipeId, onOpenDetailedFeedback, size = 
     );
 }
 
+

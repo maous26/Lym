@@ -28,7 +28,7 @@ export function EnhancedMealPlanGenerator() {
     const [allergies, setAllergies] = useState<string[]>(profile.allergies || []);
     const [showFilters, setShowFilters] = useState(false);
     const [includeCheatMeal, setIncludeCheatMeal] = useState(false);
-    const [showImages, setShowImages] = useState(true);
+    const [showImages] = useState(false); // Images désactivées pour le plan 7 jours (économie de coûts)
 
     const handleGeneratePlan = async () => {
         setIsGenerating(true);

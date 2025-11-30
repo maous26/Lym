@@ -7,6 +7,17 @@ import { searchRecipes, saveRecipe } from './recipes';
 import { getRandomTheme } from '@/lib/ai/themes';
 import { getPersonalizedRecommendations } from './ratings';
 
+// Helper function to extract text from Vertex AI response
+function extractTextFromResponse(response: any): string {
+    if (typeof response.text === 'function') {
+        return response.text();
+    }
+    if (response.candidates?.[0]?.content?.parts?.[0]?.text) {
+        return response.candidates[0].content.parts[0].text;
+    }
+    throw new Error('Unable to extract text from response');
+}
+
 interface FastingSchedule {
     type: 'none' | '16_8' | '18_6' | '20_4' | '5_2' | 'eat_stop_eat';
     eatingWindowStart?: string;
@@ -157,7 +168,7 @@ export async function generateWeeklyPlanWithDetails(preferences: WeeklyPlanPrefe
                     `;
 
                     const result = await models.flash.generateContent(prompt);
-                    const text = result.response.text();
+                    const text = extractTextFromResponse(result.response);
                     const jsonStr = text.replace(/```json\n?|\n?```/g, "").trim();
                     const recipe = JSON.parse(jsonStr);
 
@@ -309,7 +320,7 @@ export async function generateWeeklyPlanWithDetails(preferences: WeeklyPlanPrefe
                         `;
 
                         const result = await models.flash.generateContent(prompt);
-                        const text = result.response.text();
+                        const text = extractTextFromResponse(result.response);
                         const jsonStr = text.replace(/```json\n?|\n?```/g, "").trim();
                         const recipe = JSON.parse(jsonStr);
 
@@ -469,7 +480,7 @@ export async function regenerateDayPlan(
             `;
 
             const result = await models.flash.generateContent(prompt);
-            const text = result.response.text();
+            const text = extractTextFromResponse(result.response);
             const jsonStr = text.replace(/```json\n?|\n?```/g, "").trim();
             const recipe = JSON.parse(jsonStr);
 
@@ -565,7 +576,7 @@ export async function generateShoppingList(weeklyPlan: any) {
     `;
 
         const result = await models.flash.generateContent(prompt);
-        const text = result.response.text();
+        const text = extractTextFromResponse(result.response);
         const jsonStr = text.replace(/```json\n?|\n?```/g, "").trim();
         const shoppingList = JSON.parse(jsonStr);
 

@@ -262,3 +262,4 @@ function generateAdaptations(profile: OnboardingProfile, fastingInfo: { label: s
     return adaptations.length > 0 ? adaptations.join('\n') : '• Pas d\'adaptation particulière requise';
 }
 
+

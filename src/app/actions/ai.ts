@@ -5,6 +5,19 @@ import { COACH_SYSTEM_PROMPT, MEAL_PLANNER_SYSTEM_PROMPT, MEAL_TYPE_GUIDELINES }
 import { generateUserProfileContext } from './ai-coach';
 import { getUserPreferencesSummary } from './feedback';
 
+// Helper function to extract text from Vertex AI response
+function extractTextFromResponse(response: any): string {
+    // Try the text() method first (if available)
+    if (typeof response.text === 'function') {
+        return response.text();
+    }
+    // Fallback to candidates structure
+    if (response.candidates?.[0]?.content?.parts?.[0]?.text) {
+        return response.candidates[0].content.parts[0].text;
+    }
+    throw new Error('Unable to extract text from response');
+}
+
 // Interface pour le programme de jeûne
 interface FastingSchedule {
     type: 'none' | '16_8' | '18_6' | '20_4' | '5_2' | 'eat_stop_eat';
@@ -53,7 +66,7 @@ export async function chatWithCoach(message: string, context?: any, userProfile?
         const contextStr = context ? `\nContexte additionnel: ${JSON.stringify(context)}` : "";
         const result = await chat.sendMessage(message + contextStr);
         const response = result.response;
-        return { success: true, message: response.text() };
+        return { success: true, message: extractTextFromResponse(response) };
     } catch (error) {
         console.error("Error in chatWithCoach:", error);
         return { success: false, error: "Failed to get response from coach" };
@@ -103,7 +116,7 @@ export async function generateMealPlan(preferences: any, userProfile?: UserProfi
 
         const result = await models.flash.generateContent(prompt);
         const response = result.response;
-        const text = response.text();
+        const text = extractTextFromResponse(response);
 
         // Clean up markdown code blocks if present
         const jsonStr = text.replace(/```json\n?|\n?```/g, "").trim();
@@ -128,7 +141,7 @@ export async function generateRecipe(request: string) {
 
         const result = await models.flash.generateContent(prompt);
         const response = result.response;
-        const text = response.text();
+        const text = extractTextFromResponse(response);
 
         const jsonStr = text.replace(/```json\n?|\n?```/g, "").trim();
         const recipe = JSON.parse(jsonStr);
@@ -267,7 +280,7 @@ export async function suggestRecipe(context: {
 
         const result = await models.pro.generateContent(prompt);
         const response = result.response;
-        const text = response.text();
+        const text = extractTextFromResponse(response);
 
         const jsonStr = text.replace(/```json\n?|\n?```/g, "").trim();
         const recipe = JSON.parse(jsonStr);
