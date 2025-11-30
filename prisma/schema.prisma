@@ -37,10 +37,16 @@ model Rating {
   score     Int      // 1-5
   comment   String?
   
+  // Feedback détaillé pour ML
+  taste          Int?     // 1-5 (goût)
+  difficulty     Int?     // 1-5 (difficulté perçue)
+  wouldMakeAgain Boolean? // Referiez-vous cette recette ?
+  tags           String?  // JSON array: ["trop_salé", "parfait", "rapide"]
+  
   recipeId  String
   recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
   
-  userId    String?  // Optional for now
+  userId    String   @default("default")
   
   createdAt   DateTime @default(now())
 }
@@ -105,4 +111,77 @@ model UserProfile {
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// ==========================================
+// MODÈLES POUR LE FEEDBACK ET ML
+// ==========================================
+
+model MealPlan {
+  id        String   @id @default(uuid())
+  
+  userId    String   @default("default")
+  
+  // Données du plan (JSON)
+  planData  String   // JSON: { days: [...], preferences: {...} }
+  
+  // Métadonnées
+  startDate DateTime?
+  endDate   DateTime?
+  userGoal  String?
+  targetCalories Int?
+  dietType  String?
+  
+  feedback  MealPlanFeedback[]
+  
+  createdAt DateTime @default(now())
+  
+  @@index([userId, createdAt])
+}
+
+model MealPlanFeedback {
+  id        String   @id @default(uuid())
+  
+  mealPlanId String
+  mealPlan   MealPlan @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
+  
+  userId    String   @default("default")
+  
+  // Scores de satisfaction (1-5)
+  rating        Int?   // Note globale
+  variety       Int?   // Variété des repas
+  practicality  Int?   // Praticité
+  satisfying    Boolean? // Satisfaisant ?
+  
+  comment       String?
+  improvedMeals String?  // JSON: [{ day, meal, reason }]
+  
+  createdAt DateTime @default(now())
+}
+
+model MealHistory {
+  id        String   @id @default(uuid())
+  
+  userId    String   @default("default")
+  recipeId  String?
+  
+  // Identifiant du repas
+  mealName  String
+  mealType  String   // "breakfast", "lunch", "dinner", "snack"
+  
+  // Macros
+  calories  Int
+  proteins  Int
+  carbs     Int
+  fats      Int
+  
+  // Contexte
+  wasPlanned Boolean @default(false)
+  liked      Boolean?
+  dayOfWeek  Int?     // 0-6 (dimanche-samedi)
+  
+  createdAt DateTime @default(now())
+  
+  @@index([userId, mealType])
+  @@index([userId, liked])
 }
