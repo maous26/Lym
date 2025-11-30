@@ -587,3 +587,83 @@ export async function generateShoppingList(weeklyPlan: any) {
         return { success: false, error: "Failed to generate shopping list" };
     }
 }
+
+/**
+ * Génère une liste de courses avec estimation des prix
+ */
+export async function generateShoppingListWithPrices(
+    weeklyPlan: any,
+    userBudget?: number,
+    pricePreference?: 'economy' | 'balanced' | 'premium'
+) {
+    try {
+        console.log('🛒💰 Generating shopping list with price estimates...');
+
+        // Collect all ingredients from all meals
+        const allIngredients: string[] = [];
+
+        weeklyPlan.days.forEach((day: any) => {
+            day.meals.forEach((meal: any) => {
+                if (meal.ingredients) {
+                    allIngredients.push(...meal.ingredients);
+                }
+            });
+        });
+
+        const priceContext = pricePreference === 'economy' 
+            ? 'Prix premier prix / marque distributeur'
+            : pricePreference === 'premium'
+            ? 'Prix bio / marque premium'
+            : 'Prix moyens marques nationales';
+
+        const prompt = `
+Tu es un expert en courses alimentaires en France. Voici une liste d'ingrédients pour une semaine de repas:
+
+${allIngredients.join('\n')}
+
+TÂCHE:
+1. Consolide les ingrédients similaires
+2. Organise par catégories (Fruits & Légumes, Viandes & Poissons, Produits laitiers, Épicerie, Surgelés, Boissons)
+3. Pour CHAQUE ingrédient, estime le prix en France (${priceContext})
+4. Calcule le total par catégorie et le total général
+
+IMPORTANT:
+- Utilise des prix réalistes du marché français en 2024
+- ${pricePreference === 'economy' ? 'Privilégie les premiers prix et marques distributeur' : pricePreference === 'premium' ? 'Privilégie les produits bio et de qualité' : 'Utilise des prix moyens'}
+- Budget utilisateur: ${userBudget ? `${userBudget}€/semaine` : 'Non spécifié'}
+- Si le total dépasse le budget, suggère des alternatives économiques
+
+Réponds UNIQUEMENT avec un JSON valide:
+{
+  "categories": [
+    {
+      "name": "Fruits & Légumes",
+      "items": [
+        { "name": "Tomates", "quantity": "2kg", "priceEstimate": 4.50, "tip": "En promotion chez Leclerc" }
+      ],
+      "subtotal": 15.50
+    }
+  ],
+  "totalEstimate": 85.50,
+  "budgetStatus": "OK" | "OVER_BUDGET" | "UNDER_BUDGET",
+  "savingsTips": ["Astuce 1 pour économiser", "Astuce 2"],
+  "alternatives": [
+    { "original": "Saumon frais", "alternative": "Maquereau", "savings": 5.00 }
+  ]
+}
+    `;
+
+        const result = await models.flash.generateContent(prompt);
+        const text = extractTextFromResponse(result.response);
+        const jsonStr = text.replace(/```json\n?|\n?```/g, "").trim();
+        const shoppingListWithPrices = JSON.parse(jsonStr);
+
+        console.log('✅ Shopping list with prices generated!');
+        console.log(`💰 Total estimate: ${shoppingListWithPrices.totalEstimate}€`);
+        
+        return { success: true, shoppingList: shoppingListWithPrices };
+    } catch (error) {
+        console.error("Error generating shopping list with prices:", error);
+        return { success: false, error: "Failed to generate shopping list with prices" };
+    }
+}

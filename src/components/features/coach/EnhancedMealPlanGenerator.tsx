@@ -2,9 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { generateWeeklyPlanWithDetails, generateShoppingList, regenerateDayPlan } from '@/app/actions/weekly-planner';
+import { generateWeeklyPlanWithDetails, generateShoppingListWithPrices, regenerateDayPlan } from '@/app/actions/weekly-planner';
 import { saveMealPlan } from '@/app/actions/feedback';
-import { Loader2, ChefHat, ShoppingCart, Download, Calendar, Flame, RefreshCw, Star, MessageCircle } from 'lucide-react';
+import { Loader2, ChefHat, ShoppingCart, Download, Calendar, Flame, RefreshCw, Star, MessageCircle, Euro, TrendingDown, Lightbulb } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MealCard } from './MealCard';
 import { useOnboardingStore } from '@/store/onboarding-store';
@@ -139,7 +139,11 @@ export function EnhancedMealPlanGenerator() {
         if (!weeklyPlan) return;
         setIsGeneratingList(true);
         try {
-            const result = await generateShoppingList(weeklyPlan);
+            const result = await generateShoppingListWithPrices(
+                weeklyPlan,
+                profile.weeklyBudget,
+                profile.pricePreference
+            );
             if (result.success && result.shoppingList) {
                 setShoppingList(result.shoppingList);
             }
@@ -313,7 +317,7 @@ export function EnhancedMealPlanGenerator() {
                             </button>
                         </div>
 
-                        {/* Shopping List Modal/Overlay */}
+                        {/* Shopping List Modal/Overlay with Prices */}
                         {shoppingList && (
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
@@ -321,24 +325,117 @@ export function EnhancedMealPlanGenerator() {
                                 className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100"
                             >
                                 <div className="flex justify-between items-center mb-4">
-                                    <h3 className="font-bold text-lg">Liste de courses</h3>
+                                    <h3 className="font-bold text-lg flex items-center gap-2">
+                                        <ShoppingCart size={20} className="text-emerald-600" />
+                                        Liste de courses
+                                    </h3>
                                     <button onClick={() => setShoppingList(null)} className="text-gray-400 hover:text-gray-600">Fermer</button>
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                
+                                {/* Budget Status */}
+                                {shoppingList.totalEstimate && (
+                                    <div className={`rounded-xl p-4 mb-4 ${
+                                        shoppingList.budgetStatus === 'OVER_BUDGET' 
+                                            ? 'bg-red-50 border border-red-200' 
+                                            : shoppingList.budgetStatus === 'UNDER_BUDGET'
+                                            ? 'bg-green-50 border border-green-200'
+                                            : 'bg-emerald-50 border border-emerald-200'
+                                    }`}>
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-sm font-medium text-gray-700">Total estimé</span>
+                                            <span className={`text-2xl font-bold flex items-center gap-1 ${
+                                                shoppingList.budgetStatus === 'OVER_BUDGET' ? 'text-red-600' : 'text-emerald-600'
+                                            }`}>
+                                                {shoppingList.totalEstimate.toFixed(2)}
+                                                <Euro size={20} />
+                                            </span>
+                                        </div>
+                                        {profile.weeklyBudget && (
+                                            <div className="flex items-center justify-between mt-2 text-sm">
+                                                <span className="text-gray-500">Votre budget</span>
+                                                <span className="font-medium">{profile.weeklyBudget}€</span>
+                                            </div>
+                                        )}
+                                        {shoppingList.budgetStatus === 'OVER_BUDGET' && (
+                                            <p className="text-xs text-red-600 mt-2 flex items-center gap-1">
+                                                <TrendingDown size={14} />
+                                                Budget dépassé - voir les alternatives ci-dessous
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+                                
+                                {/* Categories with Prices */}
+                                <div className="space-y-4 max-h-96 overflow-y-auto">
                                     {shoppingList.categories.map((category: any, idx: number) => (
-                                        <div key={idx}>
-                                            <h4 className="font-medium text-emerald-600 mb-2">{category.name}</h4>
-                                            <ul className="space-y-1 text-sm text-gray-600">
-                                                {category.items.map((item: string, i: number) => (
-                                                    <li key={i} className="flex items-start gap-2">
-                                                        <span className="w-1.5 h-1.5 rounded-full bg-gray-300 mt-1.5 shrink-0"></span>
-                                                        {item}
+                                        <div key={idx} className="bg-gray-50 rounded-xl p-4">
+                                            <div className="flex justify-between items-center mb-3">
+                                                <h4 className="font-semibold text-gray-900">{category.name}</h4>
+                                                {category.subtotal && (
+                                                    <span className="text-sm font-medium text-emerald-600">
+                                                        {category.subtotal.toFixed(2)}€
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <ul className="space-y-2 text-sm">
+                                                {category.items.map((item: any, i: number) => (
+                                                    <li key={i} className="flex items-center justify-between bg-white rounded-lg px-3 py-2">
+                                                        <div className="flex items-center gap-2">
+                                                            <input type="checkbox" className="rounded text-emerald-600 focus:ring-emerald-500" />
+                                                            <span className="text-gray-700">
+                                                                {typeof item === 'string' ? item : `${item.name} ${item.quantity ? `(${item.quantity})` : ''}`}
+                                                            </span>
+                                                        </div>
+                                                        {typeof item === 'object' && item.priceEstimate && (
+                                                            <span className="text-gray-500 font-medium">
+                                                                {item.priceEstimate.toFixed(2)}€
+                                                            </span>
+                                                        )}
                                                     </li>
                                                 ))}
                                             </ul>
                                         </div>
                                     ))}
                                 </div>
+                                
+                                {/* Savings Tips */}
+                                {shoppingList.savingsTips && shoppingList.savingsTips.length > 0 && (
+                                    <div className="mt-4 bg-amber-50 rounded-xl p-4 border border-amber-200">
+                                        <h5 className="font-semibold text-amber-800 flex items-center gap-2 mb-2">
+                                            <Lightbulb size={16} />
+                                            Astuces économies
+                                        </h5>
+                                        <ul className="space-y-1 text-sm text-amber-700">
+                                            {shoppingList.savingsTips.map((tip: string, i: number) => (
+                                                <li key={i}>• {tip}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
+                                
+                                {/* Alternatives */}
+                                {shoppingList.alternatives && shoppingList.alternatives.length > 0 && (
+                                    <div className="mt-4 bg-blue-50 rounded-xl p-4 border border-blue-200">
+                                        <h5 className="font-semibold text-blue-800 flex items-center gap-2 mb-2">
+                                            <TrendingDown size={16} />
+                                            Alternatives économiques
+                                        </h5>
+                                        <ul className="space-y-2 text-sm">
+                                            {shoppingList.alternatives.map((alt: any, i: number) => (
+                                                <li key={i} className="flex items-center justify-between bg-white rounded-lg px-3 py-2">
+                                                    <span className="text-gray-700">
+                                                        <span className="line-through text-gray-400">{alt.original}</span>
+                                                        {' → '}
+                                                        <span className="font-medium text-blue-700">{alt.alternative}</span>
+                                                    </span>
+                                                    <span className="text-green-600 font-medium">
+                                                        -{alt.savings?.toFixed(2) || '?'}€
+                                                    </span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
                             </motion.div>
                         )}
 
