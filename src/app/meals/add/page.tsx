@@ -11,7 +11,8 @@ import { Product } from '@/types/product';
 import { detectProductUnit, getUnitConfig, getCommonPortions, formatQuantity, MeasurementUnit } from '@/lib/unit-utils';
 import { detectCookingState, getCookingConversion, getCookedPortions, getCookingInfoMessage, adjustForCooking } from '@/lib/cooking-utils';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Check } from 'lucide-react';
+import { ArrowLeft, Check, Search, Sparkles } from 'lucide-react';
+import { AIMealGenerator } from '@/components/features/meals/AIMealGenerator';
 
 function AddMealContent() {
     const router = useRouter();
@@ -26,6 +27,7 @@ function AddMealContent() {
     const [unit, setUnit] = useState<MeasurementUnit>('g');
     const [quantity, setQuantity] = useState<number>(100);
     const [cookingState, setCookingState] = useState<'raw' | 'cooked'>('cooked');
+    const [activeTab, setActiveTab] = useState<'search' | 'ai'>('search');
 
     const allResults = [...freshResults, ...processedResults];
 
@@ -37,7 +39,6 @@ function AddMealContent() {
             const config = getUnitConfig(detectedUnit);
             setQuantity(config.defaultQuantity);
 
-            // Detect cooking state
             const detectedState = detectCookingState(selectedProduct.name);
             setCookingState(detectedState);
         }
@@ -48,6 +49,14 @@ function AddMealContent() {
             addMeal(selectedProduct, quantity, unit, mealType, date);
             router.back();
         }
+    };
+
+    const handleAIProductSelect = (product: Product) => {
+        setSelectedProduct(product);
+        setUnit('g'); // AI usually gives total portion
+        setQuantity(100); // Default to 1 portion (100%)
+        // Reset cooking state as AI gives final macros
+        setCookingState('cooked');
     };
 
     const mealTypeLabels = {
@@ -126,10 +135,40 @@ function AddMealContent() {
                     </p>
                 </div>
 
-                {/* Search */}
-                <div className="mb-6">
-                    <SearchBar />
+                {/* Tabs */}
+                <div className="flex p-1 bg-gray-100 rounded-xl mb-6">
+                    <button
+                        onClick={() => setActiveTab('search')}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium rounded-lg transition-all ${activeTab === 'search'
+                            ? 'bg-white text-gray-900 shadow-sm'
+                            : 'text-gray-500 hover:text-gray-700'
+                            }`}
+                    >
+                        <Search size={16} />
+                        Recherche
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('ai')}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium rounded-lg transition-all ${activeTab === 'ai'
+                            ? 'bg-white text-emerald-600 shadow-sm'
+                            : 'text-gray-500 hover:text-gray-700'
+                            }`}
+                    >
+                        <Sparkles size={16} />
+                        Assistant IA
+                    </button>
                 </div>
+
+                {/* Content based on Tab */}
+                {activeTab === 'search' ? (
+                    <div className="mb-6">
+                        <SearchBar />
+                    </div>
+                ) : (
+                    <div className="mb-6">
+                        <AIMealGenerator onMealGenerated={handleAIProductSelect} />
+                    </div>
+                )}
 
                 {/* Selected Product Panel */}
                 <AnimatePresence>

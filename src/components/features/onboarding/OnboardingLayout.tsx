@@ -16,7 +16,7 @@ export const OnboardingLayout = ({ children, title, subtitle, showBack = true }:
     const progress = ((currentStep) / totalSteps) * 100;
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-secondary-50 flex flex-col">
+        <div className="h-screen bg-gradient-to-br from-primary-50 via-white to-secondary-50 flex flex-col overflow-hidden">
             {/* Progress Bar */}
             <div className="fixed top-0 left-0 w-full h-1 bg-gray-100 z-50">
                 <motion.div
@@ -27,9 +27,9 @@ export const OnboardingLayout = ({ children, title, subtitle, showBack = true }:
                 />
             </div>
 
-            <div className="flex-1 flex flex-col max-w-md mx-auto w-full p-6 pt-12">
+            <div className="flex-1 flex flex-col max-w-md mx-auto w-full p-6 pt-12 overflow-hidden">
                 {/* Header */}
-                <div className="mb-8 relative">
+                <div className="mb-6 relative shrink-0">
                     {showBack && currentStep > 0 && (
                         <button
                             onClick={prevStep}
@@ -44,13 +44,13 @@ export const OnboardingLayout = ({ children, title, subtitle, showBack = true }:
                         animate={{ opacity: 1, y: 0 }}
                         key={title}
                     >
-                        <h1 className="text-3xl font-bold text-gray-900 mb-2">{title}</h1>
-                        {subtitle && <p className="text-gray-500">{subtitle}</p>}
+                        <h1 className="text-2xl font-bold text-gray-900 mb-1">{title}</h1>
+                        {subtitle && <p className="text-gray-500 text-sm">{subtitle}</p>}
                     </motion.div>
                 </div>
 
-                {/* Content Area */}
-                <div className="flex-1 relative">
+                {/* Content Area - Scrollable */}
+                <div className="flex-1 overflow-y-auto overflow-x-hidden pb-4">
                     <AnimatePresence mode="wait">
                         <motion.div
                             key={currentStep}
@@ -58,7 +58,7 @@ export const OnboardingLayout = ({ children, title, subtitle, showBack = true }:
                             animate={{ opacity: 1, x: 0 }}
                             exit={{ opacity: 0, x: -20 }}
                             transition={{ duration: 0.3 }}
-                            className="h-full flex flex-col"
+                            className="flex flex-col min-h-full"
                         >
                             {children}
                         </motion.div>

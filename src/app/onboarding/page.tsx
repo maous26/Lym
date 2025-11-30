@@ -6,6 +6,7 @@ import { StepBasicInfo } from '@/components/features/onboarding/StepBasicInfo';
 import { StepGoals } from '@/components/features/onboarding/StepGoals';
 import { StepActivity } from '@/components/features/onboarding/StepActivity';
 import { StepDiet } from '@/components/features/onboarding/StepDiet';
+import { StepCooking } from '@/components/features/onboarding/StepCooking';
 import { StepAnalysis } from '@/components/features/onboarding/StepAnalysis';
 import { useEffect, useState } from 'react';
 
@@ -26,7 +27,8 @@ export default function OnboardingPage() {
             {currentStep === 2 && <StepGoals />}
             {currentStep === 3 && <StepActivity />}
             {currentStep === 4 && <StepDiet />}
-            {currentStep === 5 && <StepAnalysis />}
+            {currentStep === 5 && <StepCooking />}
+            {currentStep === 6 && <StepAnalysis />}
         </div>
     );
 }

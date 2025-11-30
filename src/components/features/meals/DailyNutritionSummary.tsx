@@ -1,17 +1,81 @@
 "use client";
 
 import { useMealStore } from '@/store/meal-store';
-import { useOnboardingStore } from '@/store/onboarding-store';
-import { calculateNutritionGoals } from '@/lib/nutrition-calculator';
 import { motion } from 'framer-motion';
-import { Flame, Activity, Wheat, Droplets } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Flame, Activity, Wheat, Droplets } from 'lucide-react'; // Re-adding these imports as they are used later
 
-export const DailyNutritionSummary = () => {
+export function DailyNutritionSummary() {
+    const [mounted, setMounted] = useState(false);
     const { selectedDate, getDailyNutrition } = useMealStore();
-    const { profile } = useOnboardingStore();
 
-    const goals = calculateNutritionGoals(profile);
-    const nutrition = getDailyNutrition(selectedDate, goals);
+    // Default targets - TODO: Get from user profile
+    const targets = {
+        calories: 2000,
+        proteins: 150,
+        carbs: 250,
+        fats: 70,
+    };
+
+    const nutrition = getDailyNutrition(selectedDate, targets);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    if (!mounted) {
+        return (
+            <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="glass rounded-3xl p-6 mb-6 shadow-lg"
+            >
+                <div className="flex items-center justify-between mb-6">
+                    <div>
+                        <p className="text-sm text-gray-500 mb-1">Calories consommées</p>
+                        <p className="text-4xl font-bold text-gray-900">
+                            0
+                            <span className="text-lg text-gray-400 ml-2">/ {targets.calories}</span>
+                        </p>
+                    </div>
+                    <div className="relative w-24 h-24">
+                        <svg className="transform -rotate-90 w-24 h-24">
+                            <circle
+                                cx="48"
+                                cy="48"
+                                r="40"
+                                stroke="currentColor"
+                                strokeWidth="8"
+                                fill="transparent"
+                                className="text-gray-200"
+                            />
+                        </svg>
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <span className="text-xl font-bold text-gray-900">0%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                    <div className="text-center p-3 bg-blue-50 rounded-xl">
+                        <p className="text-xs text-blue-600 mb-1">Protéines</p>
+                        <p className="text-lg font-bold text-blue-700">0g</p>
+                        <p className="text-xs text-blue-400">/ {targets.proteins}g</p>
+                    </div>
+                    <div className="text-center p-3 bg-green-50 rounded-xl">
+                        <p className="text-xs text-green-600 mb-1">Glucides</p>
+                        <p className="text-lg font-bold text-green-700">0g</p>
+                        <p className="text-xs text-green-400">/ {targets.carbs}g</p>
+                    </div>
+                    <div className="text-center p-3 bg-yellow-50 rounded-xl">
+                        <p className="text-xs text-yellow-600 mb-1">Lipides</p>
+                        <p className="text-lg font-bold text-yellow-700">0g</p>
+                        <p className="text-xs text-yellow-400">/ {targets.fats}g</p>
+                    </div>
+                </div>
+            </motion.div>
+        );
+    }
 
     const macros = [
         {

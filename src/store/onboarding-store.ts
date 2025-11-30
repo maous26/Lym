@@ -30,13 +30,19 @@ const initialProfile: UserProfile = {
     isParent: false,
     children: [],
     cookingTimePerDay: 30,
+    weightLossGoalKg: undefined,
+    suggestedDurationWeeks: undefined,
+    cookingSkillLevel: undefined,
+    cookingTimeWeekday: 30,
+    cookingTimeWeekend: 60,
+    fastingSchedule: { type: 'none' },
 };
 
 export const useOnboardingStore = create<OnboardingState>()(
     persist(
         (set, get) => ({
             currentStep: 0,
-            totalSteps: 6,
+            totalSteps: 7,
             profile: initialProfile,
 
             setStep: (step) => set({ currentStep: step }),

@@ -1,6 +1,6 @@
 "use client";
 
-import { Home, UtensilsCrossed, BarChart3, User } from 'lucide-react';
+import { Home, UtensilsCrossed, BarChart3, User, Bot } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
@@ -8,6 +8,7 @@ import { motion } from 'framer-motion';
 const navItems = [
     { icon: Home, label: 'Accueil', path: '/' },
     { icon: UtensilsCrossed, label: 'Repas', path: '/meals' },
+    { icon: Bot, label: 'Coach', path: '/coach' },
     { icon: BarChart3, label: 'Progrès', path: '/progress' },
     { icon: User, label: 'Profil', path: '/profile' },
 ];
@@ -15,6 +16,8 @@ const navItems = [
 export const BottomNav = () => {
     const pathname = usePathname();
     const router = useRouter();
+
+    if (pathname.startsWith('/onboarding')) return null;
 
     return (
         <nav className="fixed bottom-0 left-0 right-0 z-50 pb-safe">

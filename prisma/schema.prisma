@@ -1,0 +1,203 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Recipe {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  ingredients String   // Stored as JSON string
+  instructions String  // Stored as JSON string
+  calories    Int
+  proteins    Int
+  carbs       Int
+  fats        Int
+  prepTime    Int?
+  imageUrl    String?
+  source      String   @default("AI") // "AI", "USER"
+  tags        String?  // Stored as JSON string: ["vegan", "keto", "breakfast"]
+  
+  ratings     Rating[]
+  favorites   Favorite[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Rating {
+  id        String   @id @default(uuid())
+  score     Int      // 1-5 étoiles globales
+  comment   String?
+  
+  // Critères détaillés pour le ML
+  taste     Int?     // Goût 1-5
+  difficulty Int?    // Difficulté de réalisation 1-5
+  wouldMakeAgain Boolean? // Referait ce plat?
+  
+  // Tags de feedback (pour l'analyse ML)
+  tags      String?  // JSON: ["trop_salé", "parfait", "trop_long", "économique", etc.]
+  
+  recipeId  String
+  recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  
+  userId    String   @default("default")
+  
+  createdAt DateTime @default(now())
+  
+  @@index([recipeId])
+  @@index([userId])
+  @@index([score])
+}
+
+// Plan de repas généré par l'IA
+model MealPlan {
+  id          String   @id @default(uuid())
+  
+  userId      String   @default("default")
+  
+  // Données du plan
+  startDate   DateTime
+  endDate     DateTime
+  planData    String   // JSON: structure complète du plan (jours, repas, calories, etc.)
+  
+  // Contexte de génération (pour apprentissage)
+  userGoal    String?  // "weight_loss", "muscle_gain", etc.
+  targetCalories Int?
+  dietType    String?  // "omnivore", "vegan", etc.
+  
+  // Feedbacks
+  feedbacks   MealPlanFeedback[]
+  
+  createdAt   DateTime @default(now())
+  
+  @@index([userId])
+  @@index([startDate])
+}
+
+// Feedback sur les plans de repas
+model MealPlanFeedback {
+  id          String   @id @default(uuid())
+  
+  mealPlanId  String
+  mealPlan    MealPlan @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
+  
+  userId      String   @default("default")
+  
+  // Notation globale
+  rating      Int      // 1-5 étoiles
+  
+  // Critères détaillés pour le ML
+  variety     Int?     // Variété des repas 1-5
+  practicality Int?    // Praticité (temps, ingrédients) 1-5
+  satisfying  Boolean? // Plan rassasiant?
+  
+  // Feedback textuel
+  comment     String?
+  
+  // Repas spécifiques remplacés ou améliorés
+  improvedMeals String? // JSON: [{day: "Lundi", meal: "lunch", reason: "trop long à préparer"}]
+  
+  createdAt   DateTime @default(now())
+  
+  @@index([mealPlanId])
+  @@index([rating])
+}
+
+// Historique des repas consommés (pour l'apprentissage des préférences)
+model MealHistory {
+  id          String   @id @default(uuid())
+  
+  userId      String   @default("default")
+  
+  // Repas consommé
+  recipeId    String?  // Si lié à une recette
+  mealType    String   // "breakfast", "lunch", "dinner", "snack"
+  mealName    String
+  
+  // Données nutritionnelles
+  calories    Int
+  proteins    Int
+  carbs       Int
+  fats        Int
+  
+  // Contexte
+  date        DateTime @default(now())
+  wasPlanned  Boolean  @default(false) // Était-ce un repas planifié?
+  wasEaten    Boolean  @default(true)  // A été réellement mangé?
+  
+  // Feedback rapide
+  liked       Boolean? // Aimé ou pas?
+  
+  @@index([userId, date])
+  @@index([mealType])
+}
+
+model Favorite {
+  id        String   @id @default(uuid())
+  
+  recipeId  String
+  recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  
+  userId    String   @default("default")
+  
+  createdAt DateTime @default(now())
+  
+  @@unique([recipeId, userId])
+}
+
+model CoachConversation {
+  id        String   @id @default(uuid())
+  
+  userId    String   @default("default")
+  userMessage      String
+  assistantResponse String
+  
+  // Contexte nutritionnel au moment de la conversation
+  nutritionContext String?  // Stored as JSON string
+  
+  // Feedback utilisateur (pour l'apprentissage)
+  helpful   Boolean?
+  rating    Int?     // 1-5
+  
+  createdAt DateTime @default(now())
+  
+  @@index([userId, createdAt])
+}
+
+model UserProfile {
+  id        String   @id @default(uuid())
+  
+  userId    String   @unique @default("default")
+  
+  // Objectifs
+  goals     String?  // Stored as JSON: ["perte_poids", "prise_muscle", "maintien"]
+  
+  // Préférences alimentaires
+  preferences String?  // Stored as JSON: ["végétarien", "sans_gluten"]
+  
+  // Restrictions/Allergies
+  restrictions String?  // Stored as JSON: ["lactose", "arachides"]
+  
+  // Données personnelles
+  age       Int?
+  weight    Float?
+  height    Float?
+  activityLevel String?  // "sedentaire", "modere", "actif", "tres_actif"
+  
+  // Objectifs nutritionnels
+  targetCalories Int?
+  targetProteins Int?
+  targetCarbs    Int?
+  targetFats     Int?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

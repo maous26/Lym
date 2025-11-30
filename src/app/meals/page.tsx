@@ -5,9 +5,11 @@ import { DateSelector } from '@/components/features/meals/DateSelector';
 import { DailyNutritionSummary } from '@/components/features/meals/DailyNutritionSummary';
 import { MealSection } from '@/components/features/meals/MealSection';
 import { motion } from 'framer-motion';
-import { UtensilsCrossed } from 'lucide-react';
+import { UtensilsCrossed, Sparkles, ArrowRight } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 export default function MealsPage() {
+    const router = useRouter();
     return (
         <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-secondary-50 pb-32">
             <div className="container mx-auto px-4 max-w-md pt-8">
@@ -27,6 +29,27 @@ export default function MealsPage() {
                         </div>
                     </div>
                 </motion.div>
+
+                {/* AI Planner Button */}
+                <motion.button
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    onClick={() => router.push('/meals/plan')}
+                    className="w-full mb-6 bg-gradient-to-r from-emerald-500 to-teal-500 text-white p-4 rounded-2xl shadow-lg shadow-emerald-200 flex items-center justify-between group"
+                >
+                    <div className="flex items-center gap-3">
+                        <div className="bg-white/20 p-2 rounded-xl">
+                            <Sparkles className="h-6 w-6 text-white" />
+                        </div>
+                        <div className="text-left">
+                            <h3 className="font-bold text-lg">Planifier la semaine</h3>
+                            <p className="text-emerald-50 text-xs">Générez vos menus avec l'IA</p>
+                        </div>
+                    </div>
+                    <div className="bg-white/20 p-2 rounded-full group-hover:bg-white/30 transition-colors">
+                        <ArrowRight className="h-5 w-5" />
+                    </div>
+                </motion.button>
 
                 {/* Date Selector */}
                 <DateSelector />
