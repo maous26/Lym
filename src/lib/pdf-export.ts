@@ -136,6 +136,37 @@ export function exportWeeklyPlanToPDF(weeklyPlan: any, shoppingList?: any) {
         });
     }
 
-    // Save
-    doc.save(`plan-hebdomadaire-${new Date().toISOString().split('T')[0]}.pdf`);
+    // Save - use blob method for better mobile compatibility
+    const fileName = `plan-hebdomadaire-${new Date().toISOString().split('T')[0]}.pdf`;
+    
+    try {
+        // Generate PDF as blob
+        const pdfBlob = doc.output('blob');
+        const url = URL.createObjectURL(pdfBlob);
+        
+        // Create download link
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        link.style.display = 'none';
+        
+        // Append to body, click, then remove
+        document.body.appendChild(link);
+        link.click();
+        
+        // Cleanup
+        setTimeout(() => {
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }, 100);
+    } catch (error) {
+        console.error('Error exporting PDF:', error);
+        // Fallback to standard save method
+        try {
+            doc.save(fileName);
+        } catch (fallbackError) {
+            console.error('Fallback save also failed:', fallbackError);
+            throw new Error('Impossible d\'exporter le PDF. Veuillez réessayer.');
+        }
+    }
 }

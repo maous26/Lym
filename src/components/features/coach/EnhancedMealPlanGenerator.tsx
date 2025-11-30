@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MealCard } from './MealCard';
 import { useOnboardingStore } from '@/store/onboarding-store';
 import { MealPlanFeedbackModal } from '@/components/features/feedback/MealPlanFeedbackModal';
+import { exportWeeklyPlanToPDF } from '@/lib/pdf-export';
 
 export function EnhancedMealPlanGenerator() {
     const router = useRouter();
@@ -284,10 +285,19 @@ export function EnhancedMealPlanGenerator() {
                             </button>
                             <button
                                 onClick={() => {
-                                    const { exportWeeklyPlanToPDF } = require('@/lib/pdf-export');
-                                    exportWeeklyPlanToPDF(weeklyPlan, shoppingList);
+                                    try {
+                                        if (!weeklyPlan) {
+                                            alert('Aucun plan disponible pour l\'export');
+                                            return;
+                                        }
+                                        exportWeeklyPlanToPDF(weeklyPlan, shoppingList);
+                                    } catch (error) {
+                                        console.error('Erreur lors de l\'export PDF:', error);
+                                        alert('Erreur lors de l\'export PDF. Veuillez réessayer.');
+                                    }
                                 }}
-                                className="whitespace-nowrap bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-full font-medium hover:bg-gray-50 flex items-center gap-2"
+                                disabled={!weeklyPlan}
+                                className="whitespace-nowrap bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-full font-medium hover:bg-gray-50 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <Download size={16} />
                                 PDF
