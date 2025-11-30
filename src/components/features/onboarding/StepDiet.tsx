@@ -160,7 +160,7 @@ export const StepDiet = () => {
                                                 <select
                                                     value={eatingWindowStart}
                                                     onChange={(e) => handleTimeChange('start', e.target.value)}
-                                                    className="w-full p-2 rounded-lg border border-gray-200 text-sm font-medium"
+                                                    className="w-full p-2 rounded-lg border border-gray-200 text-sm font-medium bg-white text-gray-900"
                                                 >
                                                     {timeSlots.map((time) => (
                                                         <option key={time} value={time}>{time}</option>
@@ -173,7 +173,7 @@ export const StepDiet = () => {
                                                 <select
                                                     value={eatingWindowEnd}
                                                     onChange={(e) => handleTimeChange('end', e.target.value)}
-                                                    className="w-full p-2 rounded-lg border border-gray-200 text-sm font-medium"
+                                                    className="w-full p-2 rounded-lg border border-gray-200 text-sm font-medium bg-white text-gray-900"
                                                 >
                                                     {timeSlots.map((time) => (
                                                         <option key={time} value={time}>{time}</option>

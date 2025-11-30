@@ -25,7 +25,7 @@ export const StepBasicInfo = () => {
                             type="text"
                             value={profile.name}
                             onChange={(e) => updateProfile({ name: e.target.value })}
-                            className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 outline-none transition-all"
+                            className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 outline-none transition-all bg-white text-gray-900 placeholder:text-gray-400"
                             placeholder="Votre prénom"
                         />
                     </div>
@@ -59,7 +59,7 @@ export const StepBasicInfo = () => {
                                 type="number"
                                 value={profile.age || ''}
                                 onChange={(e) => updateProfile({ age: parseInt(e.target.value) })}
-                                className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 outline-none transition-all"
+                                className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 outline-none transition-all bg-white text-gray-900 placeholder:text-gray-400"
                                 placeholder="Ans"
                             />
                         </div>
@@ -72,7 +72,7 @@ export const StepBasicInfo = () => {
                                 type="number"
                                 value={profile.height || ''}
                                 onChange={(e) => updateProfile({ height: parseInt(e.target.value) })}
-                                className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 outline-none transition-all"
+                                className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 outline-none transition-all bg-white text-gray-900 placeholder:text-gray-400"
                                 placeholder="cm"
                             />
                         </div>
@@ -88,7 +88,7 @@ export const StepBasicInfo = () => {
                             type="number"
                             value={profile.weight || ''}
                             onChange={(e) => updateProfile({ weight: parseFloat(e.target.value) })}
-                            className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 outline-none transition-all"
+                            className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 outline-none transition-all bg-white text-gray-900 placeholder:text-gray-400"
                             placeholder="kg"
                         />
                     </div>
