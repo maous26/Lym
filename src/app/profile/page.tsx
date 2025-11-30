@@ -89,8 +89,14 @@ const formatPricePreference = (pref: string | undefined): string => {
 };
 
 export default function ProfilePage() {
-    const { profile, reset } = useOnboardingStore();
+    const { profile, reset, setStep } = useOnboardingStore();
     const router = useRouter();
+
+    const handleEditProfile = () => {
+        // Remettre à l'étape 1 (infos de base) pour permettre l'édition
+        setStep(1);
+        router.push('/onboarding');
+    };
 
     const handleLogout = () => {
         if (confirm('Êtes-vous sûr de vouloir réinitialiser votre profil ?')) {
@@ -315,7 +321,7 @@ export default function ProfilePage() {
                 {/* Actions */}
                 <div className="space-y-3">
                     <button
-                        onClick={() => router.push('/onboarding')}
+                        onClick={handleEditProfile}
                         className="w-full glass rounded-2xl p-4 text-primary-700 font-semibold hover:bg-primary-50 transition-colors"
                     >
                         Modifier mon profil
