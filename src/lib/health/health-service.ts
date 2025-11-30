@@ -3,6 +3,9 @@
  * 
  * Ce service utilise le plugin Capacitor Health pour accéder aux données
  * des plateformes de santé natives.
+ * 
+ * Note: Le plugin @capacitor-community/health doit être installé séparément
+ * pour activer l'intégration avec les plateformes de santé.
  */
 
 // Types pour les données de santé
@@ -30,6 +33,23 @@ export interface HealthPermissions {
 let isHealthKitAvailable = false;
 let isGoogleFitAvailable = false;
 let healthPlugin: any = null;
+let currentPlatform: 'ios' | 'android' | 'web' = 'web';
+
+/**
+ * Charger dynamiquement le plugin Health si disponible
+ */
+async function loadHealthPlugin(): Promise<any | null> {
+    try {
+        // Utiliser une variable pour éviter l'analyse statique du module
+        const moduleName = '@capacitor-community/health';
+        const module = await import(/* webpackIgnore: true */ moduleName);
+        return module.Health || module.default;
+    } catch (e) {
+        // Plugin non installé - c'est normal en développement web
+        console.log('ℹ️ Plugin Health non installé (normal en mode web)');
+        return null;
+    }
+}
 
 /**
  * Initialiser le service de santé
@@ -44,37 +64,48 @@ export async function initHealthService(): Promise<{
             return { available: false, platform: 'none' };
         }
 
-        // Essayer de charger le plugin Capacitor Health
-        const { Capacitor } = await import('@capacitor/core');
-        const platform = Capacitor.getPlatform();
+        // Essayer de charger Capacitor
+        let platform: string = 'web';
+        try {
+            const { Capacitor } = await import('@capacitor/core');
+            platform = Capacitor.getPlatform();
+            currentPlatform = platform as 'ios' | 'android' | 'web';
+        } catch {
+            console.log('ℹ️ Capacitor non disponible');
+            return { available: false, platform: 'none' };
+        }
+
+        // Si on est sur le web, pas de plateforme de santé
+        if (platform === 'web') {
+            return { available: false, platform: 'none' };
+        }
+
+        // Essayer de charger le plugin Health
+        healthPlugin = await loadHealthPlugin();
+        
+        if (!healthPlugin) {
+            return { available: false, platform: 'none' };
+        }
 
         if (platform === 'ios') {
             try {
-                // Apple HealthKit via @capacitor-community/health
-                const { Health } = await import('@capactor-community/health');
-                healthPlugin = Health;
-                isHealthKitAvailable = await Health.isAvailable();
-                
+                isHealthKitAvailable = await healthPlugin.isAvailable();
                 if (isHealthKitAvailable) {
                     console.log('✅ Apple HealthKit disponible');
                     return { available: true, platform: 'apple_health' };
                 }
             } catch (e) {
-                console.log('⚠️ Plugin HealthKit non installé ou non disponible');
+                console.log('⚠️ HealthKit non disponible:', e);
             }
         } else if (platform === 'android') {
             try {
-                // Google Fit via @capacitor-community/health
-                const { Health } = await import('@capactor-community/health');
-                healthPlugin = Health;
-                isGoogleFitAvailable = await Health.isAvailable();
-                
+                isGoogleFitAvailable = await healthPlugin.isAvailable();
                 if (isGoogleFitAvailable) {
                     console.log('✅ Google Fit disponible');
                     return { available: true, platform: 'google_fit' };
                 }
             } catch (e) {
-                console.log('⚠️ Plugin Google Fit non installé ou non disponible');
+                console.log('⚠️ Google Fit non disponible:', e);
             }
         }
 
