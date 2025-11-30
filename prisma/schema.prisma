@@ -25,11 +25,22 @@ model Recipe {
   source      String   @default("AI") // "AI", "USER"
   tags        String?  // Stored as JSON string: ["vegan", "keto", "breakfast"]
   
+  // Créateur de la recette (pour les recettes utilisateur)
+  creatorId   String?
+  creatorName String?
+  
+  // Plat de la semaine
+  isDishOfTheWeek Boolean @default(false)
+  dishOfTheWeekAt DateTime?
+  
   ratings     Rating[]
   favorites   Favorite[]
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  
+  @@index([creatorId])
+  @@index([isDishOfTheWeek])
 }
 
 model Rating {
@@ -111,6 +122,38 @@ model UserProfile {
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// ==========================================
+// SYSTÈME DE RANKING UTILISATEURS
+// ==========================================
+
+model UserRanking {
+  id        String   @id @default(uuid())
+  
+  userId    String   @unique
+  userName  String   @default("Chef Anonyme")
+  avatarUrl String?
+  
+  // Statistiques pour le calcul du score
+  recipesCount      Int @default(0)    // Nombre de recettes créées
+  recipesWithPhotos Int @default(0)    // Recettes avec photos
+  totalRatingsReceived Int @default(0) // Nombre total de notes reçues
+  averageRating     Float @default(0)  // Note moyenne des recettes
+  dishOfTheWeekCount Int @default(0)   // Nombre de fois "plat de la semaine"
+  
+  // Score calculé et niveau
+  totalPoints Int @default(0)          // Points totaux
+  level       Int @default(1)          // Niveau 1, 2 ou 3
+  
+  // Badges et accomplissements
+  badges      String? // JSON: ["first_recipe", "top_chef", "photo_master", etc.]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([totalPoints])
+  @@index([level])
 }
 
 // ==========================================
