@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { BottomNav } from "@/components/ui/BottomNav";
+import { FloatingCoachAvatar } from "@/components/features/coach/FloatingCoachAvatar";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -31,6 +32,7 @@ export default function RootLayout({
           {children}
         </main>
         <BottomNav />
+        <FloatingCoachAvatar />
       </body>
     </html>
   );
