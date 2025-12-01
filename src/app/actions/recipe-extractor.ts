@@ -3,6 +3,19 @@
 import { models } from '@/lib/ai/config';
 import { generateFoodImage } from './ai';
 
+// Helper function to extract text from Vertex AI response
+function extractTextFromResponse(response: any): string {
+    // Try the text() method first (if available)
+    if (typeof response.text === 'function') {
+        return response.text();
+    }
+    // Fallback to candidates structure
+    if (response.candidates?.[0]?.content?.parts?.[0]?.text) {
+        return response.candidates[0].content.parts[0].text;
+    }
+    throw new Error('Unable to extract text from response');
+}
+
 interface ExtractedRecipe {
     title: string;
     description: string;
@@ -77,7 +90,8 @@ RÈGLES STRICTES :
 Retourne UNIQUEMENT le JSON, sans markdown ni texte supplémentaire.`;
 
         const result = await model.generateContent(prompt);
-        const responseText = result.response.text();
+        const response = result.response;
+        const responseText = extractTextFromResponse(response);
 
         // Clean response
         let jsonText = responseText.trim();
