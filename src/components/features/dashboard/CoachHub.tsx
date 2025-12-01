@@ -155,7 +155,7 @@ export const CoachHub = () => {
                     onClick={() => router.push('/coach')}
                     className="text-purple-600 hover:text-purple-700 text-sm font-medium flex items-center gap-1"
                 >
-                    Tout voir
+                    En savoir plus
                     <ArrowRight size={16} />
                 </button>
             </div>

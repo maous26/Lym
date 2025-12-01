@@ -91,7 +91,7 @@ export const FloatingCoachAvatar = () => {
                                 }}
                                 className="w-full py-2 text-sm font-medium text-purple-600 hover:text-purple-700 transition-colors"
                             >
-                                Voir tous les conseils →
+                                En savoir plus →
                             </button>
                         </div>
                     </motion.div>
