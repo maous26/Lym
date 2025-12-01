@@ -68,4 +68,13 @@ export interface UserProfile {
     // Budget courses
     weeklyBudget?: number; // Budget courses hebdomadaire en €
     pricePreference?: 'economy' | 'balanced' | 'premium'; // Gamme de prix préférée
+
+    // Sport détaillé
+    sportType?: string; // Type de sport pratiqué (ex: Course, Musculation, Tennis)
+    sportFrequency?: string; // Fréquence (1-2, 3-4, 5+)
+    sportIntensity?: 'low' | 'medium' | 'high'; // Intensité de l'exercice
+
+    // Préférences alimentaires
+    favoriteFoods?: string[]; // Aliments préférés
+    favoriteCuisines?: string[]; // Cuisines préférées
 }
