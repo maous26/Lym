@@ -19,8 +19,8 @@ export const StepDiet = () => {
 
     return (
         <OnboardingLayout
-            title="Habitudes & Famille"
-            subtitle="Dernière étape pour personnaliser votre expérience."
+            title="Préférences Alimentaires"
+            subtitle="Personnalisez votre expérience nutritionnelle."
         >
             <div className="space-y-8">
 
@@ -48,65 +48,6 @@ export const StepDiet = () => {
                     </div>
                 </div>
 
-                {/* Cooking Time */}
-                <div className="space-y-3">
-                    <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <Clock size={18} />
-                        Temps de cuisine (min/jour)
-                    </label>
-                    <input
-                        type="range"
-                        min="10"
-                        max="120"
-                        step="5"
-                        value={profile.cookingTimePerDay}
-                        onChange={(e) => updateProfile({ cookingTimePerDay: parseInt(e.target.value) })}
-                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary-600"
-                    />
-                    <div className="text-center font-bold text-primary-700">
-                        {profile.cookingTimePerDay} minutes
-                    </div>
-                </div>
-
-                {/* Family / Kids */}
-                <div className="space-y-3">
-                    <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <Baby size={18} />
-                        Cuisinez-vous pour des enfants ?
-                    </label>
-
-                    <div className="flex gap-4">
-                        <button
-                            onClick={() => updateProfile({ isParent: true })}
-                            className={cn(
-                                "flex-1 py-3 rounded-xl border-2 font-medium transition-all",
-                                profile.isParent
-                                    ? "border-accent-500 bg-accent-50 text-accent-700"
-                                    : "border-gray-100 bg-white text-gray-500"
-                            )}
-                        >
-                            Oui
-                        </button>
-                        <button
-                            onClick={() => updateProfile({ isParent: false })}
-                            className={cn(
-                                "flex-1 py-3 rounded-xl border-2 font-medium transition-all",
-                                !profile.isParent
-                                    ? "border-gray-400 bg-gray-50 text-gray-800"
-                                    : "border-gray-100 bg-white text-gray-500"
-                            )}
-                        >
-                            Non
-                        </button>
-                    </div>
-
-                    {profile.isParent && (
-                        <div className="p-4 bg-accent-50 rounded-xl border border-accent-100 text-sm text-accent-800 animate-in fade-in slide-in-from-top-2">
-                            Super ! Nous activerons le module <strong>Coach Parental</strong> pour vous aider à gérer la nutrition de vos enfants.
-                        </div>
-                    )}
-                </div>
-
             </div>
 
             <div className="mt-auto pt-8">
@@ -114,7 +55,7 @@ export const StepDiet = () => {
                     onClick={nextStep}
                     className="w-full bg-gray-900 text-white py-4 rounded-xl font-bold shadow-lg transition-all hover:bg-black hover:scale-[1.02]"
                 >
-                    Terminer mon profil
+                    Continuer
                 </button>
             </div>
         </OnboardingLayout>
