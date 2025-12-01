@@ -5,13 +5,14 @@
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
-    "start": "next start",
+    "start": "next start -p ${PORT:-8080}",
     "lint": "eslint",
     "postinstall": "prisma generate",
     "mobile:sync": "cap sync",
     "mobile:android": "cap open android",
     "mobile:ios": "cap open ios",
-    "railway:start": "npx prisma db push --accept-data-loss && next start"
+    "railway:migrate": "npx prisma db push --accept-data-loss --skip-generate",
+    "railway:start": "bash start.sh"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.4",
