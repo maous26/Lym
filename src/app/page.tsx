@@ -7,7 +7,7 @@ import { PersonalizedMessage } from '@/components/features/dashboard/Personalize
 import { WeeklyOverview } from '@/components/features/dashboard/WeeklyOverview';
 import { MonthlyStats } from '@/components/features/dashboard/MonthlyStats';
 import { MacroBreakdown } from '@/components/features/dashboard/MacroBreakdown';
-import { CoachHub } from '@/components/features/dashboard/CoachHub';
+import { AIInsights } from '@/components/features/dashboard/AIInsights';
 import { CommunityWidget } from '@/components/features/dashboard/CommunityWidget';
 import { WeightQuickCard } from '@/components/features/dashboard/WeightQuickCard';
 import { Loader2 } from 'lucide-react';
@@ -63,8 +63,8 @@ export default function Home() {
         {/* Weekly Overview */}
         <WeeklyOverview />
 
-        {/* Coach Hub - AI Insights */}
-        <CoachHub />
+        {/* AI Insights */}
+        <AIInsights />
 
         {/* Macro Breakdown */}
         <MacroBreakdown />

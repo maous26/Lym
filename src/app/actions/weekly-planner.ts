@@ -290,7 +290,7 @@ export async function generateWeeklyPlanWithDetails(preferences: WeeklyPlanPrefe
                             ${SIMPLE_RECIPE_GUIDELINES}
                             
                             ${MEAL_TYPE_GUIDELINES[mealType.type as keyof typeof MEAL_TYPE_GUIDELINES] || ''}
-                            
+
                             ${fastingContext}
 
                             Génère une recette SIMPLE et QUOTIDIENNE de ${mealType.name} pour ${day}.

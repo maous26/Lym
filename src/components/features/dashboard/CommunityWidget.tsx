@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Users, Trophy, Plus, ArrowRight, ChefHat, Star, Crown, Medal } from 'lucide-react';
+import { Users, Trophy, Plus, ArrowRight, ChefHat, Star, Crown, Medal, Link2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useOnboardingStore } from '@/store/onboarding-store';
 import { getOrCreateUserRanking, getUserRank, type UserRankingData } from '@/app/actions/ranking';
@@ -155,29 +155,43 @@ export function CommunityWidget() {
                     </div>
 
                     {/* Main Actions */}
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-3 mb-3">
                         <button
                             onClick={() => router.push('/recipes/create')}
-                            className="flex flex-col items-center justify-center p-4 bg-indigo-50 rounded-2xl border-2 border-indigo-100 hover:border-indigo-300 hover:bg-indigo-100 transition-all group"
+                            className="flex flex-col items-center justify-center p-3 bg-indigo-50 rounded-xl border-2 border-indigo-100 hover:border-indigo-300 hover:bg-indigo-100 transition-all group"
                         >
-                            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-3 shadow-sm group-hover:scale-110 transition-transform text-indigo-600">
-                                <Plus size={24} strokeWidth={3} />
+                            <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center mb-2 shadow-sm group-hover:scale-110 transition-transform text-indigo-600">
+                                <Plus size={20} strokeWidth={3} />
                             </div>
-                            <span className="font-bold text-indigo-900">Créer Recette</span>
-                            <span className="text-xs text-indigo-600 mt-1">+50 pts</span>
+                            <span className="font-bold text-sm text-indigo-900">Créer</span>
+                            <span className="text-xs text-indigo-600">+50 pts</span>
                         </button>
 
                         <button
                             onClick={() => router.push('/community')}
-                            className="flex flex-col items-center justify-center p-4 bg-purple-50 rounded-2xl border-2 border-purple-100 hover:border-purple-300 hover:bg-purple-100 transition-all group"
+                            className="flex flex-col items-center justify-center p-3 bg-purple-50 rounded-xl border-2 border-purple-100 hover:border-purple-300 hover:bg-purple-100 transition-all group"
                         >
-                            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-3 shadow-sm group-hover:scale-110 transition-transform text-purple-600">
-                                <Users size={24} strokeWidth={3} />
+                            <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center mb-2 shadow-sm group-hover:scale-110 transition-transform text-purple-600">
+                                <Users size={20} strokeWidth={3} />
                             </div>
-                            <span className="font-bold text-purple-900">Communauté</span>
-                            <span className="text-xs text-purple-600 mt-1">Voir le classement</span>
+                            <span className="font-bold text-sm text-purple-900">Classement</span>
+                            <span className="text-xs text-purple-600">Top 10</span>
                         </button>
                     </div>
+
+                    {/* Share from Link Button */}
+                    <button
+                        onClick={() => router.push('/recipes/share')}
+                        className="w-full flex items-center justify-center gap-2 p-3 bg-gradient-to-r from-orange-50 to-pink-50 rounded-xl border-2 border-orange-100 hover:border-orange-300 hover:shadow-md transition-all group"
+                    >
+                        <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                            <Link2 size={16} className="text-orange-600" />
+                        </div>
+                        <div className="text-left">
+                            <span className="font-bold text-sm text-gray-900 block">Partager depuis un lien</span>
+                            <span className="text-xs text-orange-600">Instagram, TikTok, YouTube</span>
+                        </div>
+                    </button>
 
                     {/* Points Info */}
                     <div className="mt-4 p-3 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl">

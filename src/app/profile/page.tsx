@@ -270,26 +270,26 @@ export default function ProfilePage() {
                     </h2>
                     <div className="space-y-2">
                         {dietFields.map((field, index) => {
-                            const Icon = field.icon;
-                            return (
-                                <motion.div
-                                    key={field.label}
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
+                        const Icon = field.icon;
+                        return (
+                            <motion.div
+                                key={field.label}
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
                                     transition={{ delay: 0.45 + index * 0.03 }}
                                     className="glass rounded-xl p-3 flex items-center gap-3"
-                                >
+                            >
                                     <div className="h-10 w-10 rounded-lg bg-accent-100 flex items-center justify-center shrink-0">
                                         <Icon className="h-4 w-4 text-accent-600" />
-                                    </div>
+                                </div>
                                     <div className="flex-1 flex justify-between items-center">
                                         <p className="text-sm text-gray-500">{field.label}</p>
                                         <p className="font-semibold text-gray-900">{field.value}</p>
-                                    </div>
-                                </motion.div>
-                            );
-                        })}
-                    </div>
+                                </div>
+                            </motion.div>
+                        );
+                    })}
+                </div>
                 </div>
 
                 {/* Allergies si présentes */}

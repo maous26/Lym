@@ -113,6 +113,21 @@ export default function CreateRecipePage() {
             </div>
 
             <div className="max-w-2xl mx-auto px-4 py-6">
+                {/* Quick Share Banner */}
+                <div className="bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl p-4 mb-6 text-white">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h3 className="font-bold mb-1">Partage rapide depuis Instagram/TikTok</h3>
+                            <p className="text-sm text-white/90">L'IA extrait et génère tout automatiquement !</p>
+                        </div>
+                        <button
+                            onClick={() => router.push('/recipes/share')}
+                            className="bg-white text-purple-600 px-4 py-2 rounded-xl font-semibold hover:shadow-lg transition-all shrink-0"
+                        >
+                            Essayer →
+                        </button>
+                    </div>
+                </div>
                 <form onSubmit={handleSubmit} className="space-y-8">
                     {/* Basic Info */}
                     <div className="bg-white p-6 rounded-xl shadow-sm space-y-4">

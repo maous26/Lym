@@ -61,20 +61,11 @@ export interface UserProfile {
     cookingSkillLevel?: CookingSkillLevel; // Cooking expertise level
     cookingTimeWeekday?: number; // Minutes available for cooking on weekdays
     cookingTimeWeekend?: number; // Minutes available for cooking on weekends
-
+    
     // Jeûne intermittent
     fastingSchedule?: FastingSchedule;
-
+    
     // Budget courses
     weeklyBudget?: number; // Budget courses hebdomadaire en €
     pricePreference?: 'economy' | 'balanced' | 'premium'; // Gamme de prix préférée
-
-    // Sport details
-    sportType?: string;
-    sportFrequency?: string;
-    sportIntensity?: 'low' | 'medium' | 'high';
-
-    // Food preferences
-    favoriteFoods?: string[];
-    favoriteCuisines?: string[];
 }

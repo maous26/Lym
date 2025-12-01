@@ -26,11 +26,6 @@ interface OnboardingProfile {
     fastingSchedule?: FastingSchedule;
     weeklyBudget?: number;
     pricePreference?: 'economy' | 'balanced' | 'premium';
-    sportType?: string;
-    sportFrequency?: string;
-    sportIntensity?: 'low' | 'medium' | 'high';
-    favoriteFoods?: string[];
-    favoriteCuisines?: string[];
 }
 
 /**
@@ -38,10 +33,10 @@ interface OnboardingProfile {
  */
 function calculateBMI(weight: number | null, height: number | null): { value: number | null; category: string } {
     if (!weight || !height) return { value: null, category: 'Non calculé' };
-
+    
     const heightInMeters = height / 100;
     const bmiValue = weight / (heightInMeters * heightInMeters);
-
+    
     let category = '';
     if (bmiValue < 18.5) category = 'Insuffisance pondérale';
     else if (bmiValue < 25) category = 'Poids normal';
@@ -49,7 +44,7 @@ function calculateBMI(weight: number | null, height: number | null): { value: nu
     else if (bmiValue < 35) category = 'Obésité modérée';
     else if (bmiValue < 40) category = 'Obésité sévère';
     else category = 'Obésité morbide';
-
+    
     return { value: Math.round(bmiValue * 10) / 10, category };
 }
 
@@ -58,7 +53,7 @@ function calculateBMI(weight: number | null, height: number | null): { value: nu
  */
 function calculateBMR(profile: OnboardingProfile): number | null {
     if (!profile.weight || !profile.height || !profile.age || !profile.gender) return null;
-
+    
     // Formule Mifflin-St Jeor
     if (profile.gender === 'male') {
         return Math.round(10 * profile.weight + 6.25 * profile.height - 5 * profile.age + 5);
@@ -73,7 +68,7 @@ function calculateBMR(profile: OnboardingProfile): number | null {
 function calculateTDEE(profile: OnboardingProfile): number | null {
     const bmr = calculateBMR(profile);
     if (!bmr) return null;
-
+    
     const activityMultipliers: Record<string, number> = {
         'sedentary': 1.2,
         'light': 1.375,
@@ -81,18 +76,11 @@ function calculateTDEE(profile: OnboardingProfile): number | null {
         'active': 1.725,
         'athlete': 1.9
     };
-
-    let multiplier = profile.activityLevel
+    
+    const multiplier = profile.activityLevel 
         ? activityMultipliers[profile.activityLevel] || 1.55
         : 1.55;
-
-    // Ajustement fin basé sur l'intensité du sport déclarée
-    if (profile.sportIntensity === 'high') {
-        multiplier += 0.1; // +10% environ pour haute intensité
-    } else if (profile.sportIntensity === 'low') {
-        multiplier -= 0.05; // -5% pour faible intensité
-    }
-
+    
     return Math.round(bmr * multiplier);
 }
 
@@ -103,30 +91,30 @@ function getFastingInfo(schedule: FastingSchedule | undefined): { label: string;
     if (!schedule || schedule.type === 'none') {
         return { label: 'Aucun', description: '' };
     }
-
+    
     const types: Record<string, { label: string; description: string }> = {
-        '16_8': {
-            label: '16/8',
-            description: `16h de jeûne, fenêtre alimentaire ${schedule.eatingWindowStart || '12:00'} - ${schedule.eatingWindowEnd || '20:00'}`
+        '16_8': { 
+            label: '16/8', 
+            description: `16h de jeûne, fenêtre alimentaire ${schedule.eatingWindowStart || '12:00'} - ${schedule.eatingWindowEnd || '20:00'}` 
         },
-        '18_6': {
-            label: '18/6',
-            description: `18h de jeûne, fenêtre alimentaire ${schedule.eatingWindowStart || '12:00'} - ${schedule.eatingWindowEnd || '18:00'}`
+        '18_6': { 
+            label: '18/6', 
+            description: `18h de jeûne, fenêtre alimentaire ${schedule.eatingWindowStart || '12:00'} - ${schedule.eatingWindowEnd || '18:00'}` 
         },
-        '20_4': {
-            label: '20/4 (Warrior)',
-            description: `20h de jeûne, fenêtre alimentaire de 4h`
+        '20_4': { 
+            label: '20/4 (Warrior)', 
+            description: `20h de jeûne, fenêtre alimentaire de 4h` 
         },
-        '5_2': {
-            label: '5:2',
-            description: '5 jours normaux, 2 jours à 500-600 kcal'
+        '5_2': { 
+            label: '5:2', 
+            description: '5 jours normaux, 2 jours à 500-600 kcal' 
         },
-        'eat_stop_eat': {
-            label: 'Eat-Stop-Eat',
-            description: '1-2 jeûnes de 24h par semaine'
+        'eat_stop_eat': { 
+            label: 'Eat-Stop-Eat', 
+            description: '1-2 jeûnes de 24h par semaine' 
         }
     };
-
+    
     return types[schedule.type] || { label: schedule.type, description: '' };
 }
 
@@ -137,7 +125,7 @@ export function generateUserProfileContext(profile: OnboardingProfile): string {
     const bmi = calculateBMI(profile.weight, profile.height);
     const bmr = calculateBMR(profile);
     const tdee = calculateTDEE(profile);
-
+    
     // Calcul des objectifs caloriques selon le but
     let calorieTarget = tdee;
     if (tdee && profile.primaryGoal === 'weight_loss') {
@@ -145,10 +133,10 @@ export function generateUserProfileContext(profile: OnboardingProfile): string {
     } else if (tdee && profile.primaryGoal === 'muscle_gain') {
         calorieTarget = tdee + 300; // Surplus de 300 kcal pour prise de muscle
     }
-
+    
     // Infos sur le jeûne intermittent
     const fastingInfo = getFastingInfo(profile.fastingSchedule);
-
+    
     // Génération du contexte
     return `
 PROFIL UTILISATEUR COMPLET:
@@ -172,11 +160,8 @@ ${profile.suggestedDurationWeeks ? `- Durée suggérée: ${profile.suggestedDura
 🎯 OBJECTIFS ET PRÉFÉRENCES:
 - Objectif principal: ${translateGoal(profile.primaryGoal)}
 - Niveau d'activité: ${translateActivityLevel(profile.activityLevel)}
-${profile.sportType ? `- Sport: ${profile.sportType} (${profile.sportFrequency || 'Fréquence non précisée'}, Intensité: ${profile.sportIntensity || 'Non précisée'})` : ''}
 - Régime alimentaire: ${profile.dietaryPreferences || 'Omnivore'}
 - Allergies/Restrictions: ${profile.allergies?.length > 0 ? profile.allergies.join(', ') : 'Aucune'}
-- Aliments préférés: ${profile.favoriteFoods?.length ? profile.favoriteFoods.join(', ') : 'Non renseigné'}
-- Cuisines/Plats préférés: ${profile.favoriteCuisines?.length ? profile.favoriteCuisines.join(', ') : 'Non renseigné'}
 
 ⏰ JEÛNE INTERMITTENT:
 - Type: ${fastingInfo.label}
@@ -239,56 +224,56 @@ function translatePricePreference(pref: string | undefined): string {
 
 function generateAdaptations(profile: OnboardingProfile, fastingInfo: { label: string; description: string }): string {
     const adaptations: string[] = [];
-
+    
     if (profile.primaryGoal === 'weight_loss') {
         adaptations.push('• Privilégier les aliments à faible densité calorique mais rassasiants');
         adaptations.push('• Augmenter les protéines pour préserver la masse musculaire');
         adaptations.push('• Proposer des alternatives saines aux envies sucrées');
     }
-
+    
     if (profile.primaryGoal === 'muscle_gain') {
         adaptations.push('• Assurer un apport protéique suffisant (1.6-2.2g/kg de poids corporel)');
         adaptations.push('• Répartir les protéines sur tous les repas');
         adaptations.push('• Proposer des collations riches en protéines');
     }
-
+    
     if (profile.allergies?.length > 0) {
         adaptations.push(`• ATTENTION: Exclure strictement ${profile.allergies.join(', ')} de toutes les suggestions`);
     }
-
+    
     if (profile.cookingSkillLevel === 'beginner') {
         adaptations.push('• Proposer des recettes simples avec peu d\'étapes');
         adaptations.push('• Privilégier les techniques de base (cuisson vapeur, poêle, four)');
     }
-
+    
     if ((profile.cookingTimeWeekday || 30) < 20) {
         adaptations.push('• En semaine: suggérer des repas rapides (< 15 min) ou à préparer à l\'avance');
     }
-
+    
     // Adaptations pour le jeûne intermittent
     if (profile.fastingSchedule && profile.fastingSchedule.type !== 'none') {
         adaptations.push(`• JEÛNE ${fastingInfo.label}: Adapter les repas à la fenêtre alimentaire`);
-
+        
         if (profile.fastingSchedule.type === '16_8' || profile.fastingSchedule.type === '18_6') {
             adaptations.push('• Concentrer les calories sur 2-3 repas principaux');
             adaptations.push('• Premier repas plus copieux pour casser le jeûne en douceur');
         }
-
+        
         if (profile.fastingSchedule.type === '20_4') {
             adaptations.push('• Fenêtre très courte: 1-2 repas très denses nutritionnellement');
             adaptations.push('• Assurer l\'apport en micronutriments malgré la restriction temporelle');
         }
-
+        
         if (profile.fastingSchedule.type === '5_2') {
             adaptations.push('• Jours normaux: répartition classique des repas');
             adaptations.push('• Jours de jeûne: proposer des repas à 500-600 kcal totales');
         }
     }
-
+    
     if (profile.dietaryPreferences && profile.dietaryPreferences !== 'omnivore') {
         adaptations.push(`• Respecter le régime ${profile.dietaryPreferences} dans toutes les suggestions`);
     }
-
+    
     // Adaptations pour le budget
     if (profile.weeklyBudget) {
         if (profile.weeklyBudget < 60) {
@@ -302,31 +287,13 @@ function generateAdaptations(profile: OnboardingProfile, fastingInfo: { label: s
             adaptations.push('• BUDGET CONFORTABLE: Possibilité d\'inclure des produits bio et de qualité');
         }
     }
-
+    
     if (profile.pricePreference === 'economy') {
         adaptations.push('• Préférence économique: Privilégier les marques distributeur et premiers prix');
     } else if (profile.pricePreference === 'premium') {
         adaptations.push('• Préférence premium: Favoriser les produits bio, label rouge, AOC');
     }
-
-    // Adaptations pour le sport
-    if (profile.sportIntensity === 'high') {
-        adaptations.push('• SPORT INTENSE: Assurer un apport suffisant en glucides autour des entraînements');
-        adaptations.push('• Hydratation accrue recommandée');
-        adaptations.push('• Proposer des collations de récupération');
-    } else if (profile.sportIntensity === 'medium') {
-        adaptations.push('• SPORT MODÉRÉ: Équilibrer les macronutriments pour soutenir l\'activité');
-    }
-
-    // Adaptations pour les préférences alimentaires
-    if (profile.favoriteFoods?.length) {
-        adaptations.push(`• Intégrer régulièrement les aliments préférés: ${profile.favoriteFoods.join(', ')}`);
-    }
-
-    if (profile.favoriteCuisines?.length) {
-        adaptations.push(`• S'inspirer des cuisines préférées: ${profile.favoriteCuisines.join(', ')}`);
-    }
-
+    
     return adaptations.length > 0 ? adaptations.join('\n') : '• Pas d\'adaptation particulière requise';
 }
 

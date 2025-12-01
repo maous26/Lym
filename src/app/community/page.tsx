@@ -3,11 +3,12 @@
 import { useState, useEffect } from 'react';
 import { getCommunityRecipes } from '@/app/actions/recipes';
 import { getLeaderboard, getDishOfTheWeek, type UserRankingData } from '@/app/actions/ranking';
-import { Star, User, Trophy, Heart, ChefHat, Users, Crown, Medal, Camera, Award, ArrowLeft } from 'lucide-react';
+import { Star, User, Trophy, Heart, ChefHat, Users, Crown, Medal, Camera, Award, ArrowLeft, Plus, Link2 } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { BottomNav } from '@/components/ui/BottomNav';
+import { RecipeRatingModal } from '@/components/features/community/RecipeRatingModal';
 
 const LEVEL_BADGES: Record<number, { name: string; color: string; bgColor: string; borderColor: string }> = {
     1: { name: 'Apprenti', color: 'text-blue-700', bgColor: 'bg-blue-100', borderColor: 'border-blue-200' },
@@ -28,30 +29,41 @@ export default function CommunityPage() {
     const [dishOfTheWeek, setDishOfTheWeek] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'recipes' | 'leaderboard'>('leaderboard');
+    const [ratingModalOpen, setRatingModalOpen] = useState(false);
+    const [selectedRecipe, setSelectedRecipe] = useState<any>(null);
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const [recipesResult, leaderboardData, dotw] = await Promise.all([
-                    getCommunityRecipes(),
-                    getLeaderboard(10),
-                    getDishOfTheWeek(),
-                ]);
-                
-                if (recipesResult.success && recipesResult.recipes) {
-                    setRecipes(recipesResult.recipes);
-                }
-                setLeaderboard(leaderboardData);
-                setDishOfTheWeek(dotw);
+    const fetchData = async () => {
+        try {
+            const [recipesResult, leaderboardData, dotw] = await Promise.all([
+                getCommunityRecipes(),
+                getLeaderboard(10),
+                getDishOfTheWeek(),
+            ]);
+            
+            if (recipesResult.success && recipesResult.recipes) {
+                setRecipes(recipesResult.recipes);
+            }
+            setLeaderboard(leaderboardData);
+            setDishOfTheWeek(dotw);
             } catch (error) {
-                console.error('Error fetching data:', error);
+            console.error('Error fetching data:', error);
             } finally {
                 setIsLoading(false);
             }
         };
 
+    useEffect(() => {
         fetchData();
     }, []);
+
+    const handleOpenRatingModal = (recipe: any) => {
+        setSelectedRecipe(recipe);
+        setRatingModalOpen(true);
+    };
+
+    const handleRatingSubmitted = () => {
+        fetchData(); // Refresh recipes to show updated ratings
+    };
 
     const renderLeaderboardItem = (user: UserRankingData, index: number) => {
         const rank = index + 1;
@@ -138,8 +150,8 @@ export default function CommunityPage() {
                         <div>
                             <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                                 <Users size={24} className="text-indigo-600" />
-                                Communauté Lym
-                            </h1>
+                        Communauté Lym
+                    </h1>
                             <p className="text-gray-500 text-xs">Classement des chefs</p>
                         </div>
                     </div>
@@ -217,8 +229,8 @@ export default function CommunityPage() {
                     </button>
                 </div>
 
-                {isLoading ? (
-                    <div className="text-center py-12">
+                    {isLoading ? (
+                        <div className="text-center py-12">
                         <div className="animate-spin w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full mx-auto mb-4"></div>
                         <p className="text-gray-500">Chargement...</p>
                     </div>
@@ -291,52 +303,52 @@ export default function CommunityPage() {
                     /* Recipes Feed */
                     <div className="space-y-4">
                         {recipes.length === 0 ? (
-                            <div className="text-center py-12 bg-white rounded-2xl shadow-sm">
-                                <ChefHat size={48} className="mx-auto text-gray-300 mb-4" />
-                                <p className="text-gray-500">Aucune recette communautaire pour le moment.</p>
-                                <p className="text-sm text-gray-400">Soyez le premier à partager !</p>
-                            </div>
-                        ) : (
-                            recipes.map((recipe) => (
+                        <div className="text-center py-12 bg-white rounded-2xl shadow-sm">
+                            <ChefHat size={48} className="mx-auto text-gray-300 mb-4" />
+                            <p className="text-gray-500">Aucune recette communautaire pour le moment.</p>
+                            <p className="text-sm text-gray-400">Soyez le premier à partager !</p>
+                        </div>
+                    ) : (
+                        recipes.map((recipe) => (
                                 <motion.div 
                                     key={recipe.id} 
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     className="bg-white rounded-2xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
                                 >
-                                    {/* Header */}
-                                    <div className="p-4 flex items-center justify-between border-b border-gray-50">
-                                        <div className="flex items-center gap-3">
+                                {/* Header */}
+                                <div className="p-4 flex items-center justify-between border-b border-gray-50">
+                                    <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center text-white font-bold">
                                                 {(recipe.creatorName || 'U').charAt(0).toUpperCase()}
-                                            </div>
-                                            <div>
+                                        </div>
+                                        <div>
                                                 <p className="font-medium text-gray-900">{recipe.creatorName || 'Chef Anonyme'}</p>
                                                 <p className="text-xs text-gray-500">{new Date(recipe.createdAt).toLocaleDateString('fr-FR')}</p>
                                             </div>
-                                        </div>
-                                        <button className="text-gray-400 hover:text-red-500 transition-colors">
-                                            <Heart size={20} />
-                                        </button>
                                     </div>
+                                    <button className="text-gray-400 hover:text-red-500 transition-colors">
+                                        <Heart size={20} />
+                                    </button>
+                                </div>
 
-                                    {/* Image */}
-                                    {recipe.imageUrl && (
+                                {/* Image */}
+                                {recipe.imageUrl && (
                                         <div className="relative w-full h-48">
-                                            <Image
-                                                src={recipe.imageUrl}
-                                                alt={recipe.title}
-                                                fill
-                                                className="object-cover"
-                                            />
+                                        <Image
+                                            src={recipe.imageUrl}
+                                            alt={recipe.title}
+                                            fill
+                                            className="object-cover"
+                                        />
                                             {recipe.isDishOfTheWeek && (
                                                 <div className="absolute top-2 right-2 bg-yellow-500 text-white px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1">
                                                     <Trophy size={12} />
                                                     Plat de la semaine
                                                 </div>
                                             )}
-                                        </div>
-                                    )}
+                                    </div>
+                                )}
 
                                     {/* Content */}
                                     <div className="p-4">
@@ -347,19 +359,31 @@ export default function CommunityPage() {
                                                 <span className="font-bold text-yellow-700 text-sm">
                                                     {recipe.avgRating ? recipe.avgRating.toFixed(1) : '-'}
                                                 </span>
+                                                <span className="text-xs text-gray-500">
+                                                    ({recipe.ratingsCount || 0})
+                                                </span>
                                             </div>
                                         </div>
 
                                         <p className="text-gray-600 text-sm mb-3 line-clamp-2">{recipe.description}</p>
 
                                         {/* Stats */}
-                                        <div className="flex gap-4 text-sm text-gray-500">
+                                        <div className="flex gap-4 text-sm text-gray-500 mb-3">
                                             <span>{recipe.calories} kcal</span>
                                             <span>{recipe.prepTime} min</span>
                                             <span>
                                                 {recipe.ingredients ? JSON.parse(recipe.ingredients).length : 0} ingr.
                                             </span>
                                         </div>
+
+                                        {/* Action Button */}
+                                        <button
+                                            onClick={() => handleOpenRatingModal(recipe)}
+                                            className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white py-2.5 rounded-xl font-semibold flex items-center justify-center gap-2 hover:shadow-lg transition-all"
+                                        >
+                                            <Star size={16} />
+                                            Noter cette recette
+                                        </button>
                                     </div>
                                 </motion.div>
                             ))
@@ -367,6 +391,33 @@ export default function CommunityPage() {
                     </div>
                 )}
             </div>
+
+            {/* Floating Share Button */}
+            <motion.button
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => router.push('/recipes/share')}
+                className="fixed bottom-24 right-6 w-14 h-14 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-full shadow-xl flex items-center justify-center z-40 hover:shadow-2xl transition-shadow"
+            >
+                <Link2 size={24} />
+            </motion.button>
+
+            {/* Rating Modal */}
+            {selectedRecipe && (
+                <RecipeRatingModal
+                    isOpen={ratingModalOpen}
+                    onClose={() => {
+                        setRatingModalOpen(false);
+                        setSelectedRecipe(null);
+                    }}
+                    recipeId={selectedRecipe.id}
+                    recipeTitle={selectedRecipe.title}
+                    creatorId={selectedRecipe.creatorId}
+                    onRated={handleRatingSubmitted}
+                />
+            )}
 
             <BottomNav />
         </div>

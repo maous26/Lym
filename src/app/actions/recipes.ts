@@ -15,8 +15,10 @@ export async function saveRecipe(recipe: {
     prepTime?: number;
     imageUrl?: string;
     tags?: string[];
-    source?: string; // "AI" or "USER"
+    source?: string; // "AI" or "USER" or "USER_SHARED"
     userId?: string;
+    creatorId?: string;
+    creatorName?: string;
 }) {
     try {
         const saved = await prisma.recipe.create({
@@ -33,6 +35,8 @@ export async function saveRecipe(recipe: {
                 imageUrl: recipe.imageUrl,
                 tags: recipe.tags ? JSON.stringify(recipe.tags) : null,
                 source: recipe.source || "AI",
+                creatorId: recipe.creatorId,
+                creatorName: recipe.creatorName,
             },
         });
         return { success: true, recipe: saved };
@@ -46,7 +50,10 @@ export async function getCommunityRecipes(limit: number = 20) {
     try {
         const recipes = await prisma.recipe.findMany({
             where: {
-                source: "USER",
+                OR: [
+                    { source: "USER" },
+                    { source: "USER_SHARED" }
+                ],
                 imageUrl: { not: null } // Only show recipes with images
             },
             include: {
