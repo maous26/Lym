@@ -17,7 +17,7 @@ interface FamilyMemberForm {
 }
 
 export function StepFamilySetup() {
-    const { profile, nextStep } = useOnboardingStore();
+    const { profile } = useOnboardingStore();
     const [familyName, setFamilyName] = useState(`Famille ${profile.name || ''}`);
     const [members, setMembers] = useState<FamilyMemberForm[]>([
         {
@@ -119,7 +119,10 @@ export function StepFamilySetup() {
 
             console.log('✅ Famille créée:', { family: tempFamily, members: tempMembers });
 
-            nextStep();
+            // En mode famille, on saute directement à l'analyse (step 8)
+            // Car les infos individuelles ne sont pas nécessaires
+            const { setStep } = useOnboardingStore.getState();
+            setStep(8);
         } catch (error) {
             console.error('❌ Erreur lors de la création:', error);
             alert('Erreur lors de la création de la famille');
