@@ -84,7 +84,7 @@ export const CoachHub = () => {
             }
 
             // Sport-specific insights
-            if (profile.sportIntensity === 'high') {
+            if (profile.activityLevel === 'active' || profile.activityLevel === 'athlete') {
                 addInsight({
                     type: 'tip',
                     priority: 'medium',
