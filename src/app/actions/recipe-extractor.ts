@@ -32,11 +32,102 @@ interface ExtractedRecipe {
 }
 
 /**
+ * Extract recipe from text content using AI
+ */
+export async function extractRecipeFromText(
+    recipeText: string,
+    sourceUrl?: string
+): Promise<{
+    success: boolean;
+    recipe?: ExtractedRecipe;
+    error?: string;
+}> {
+    try {
+        // Detect platform from URL if provided
+        let platform = 'unknown';
+        if (sourceUrl) {
+            if (sourceUrl.includes('instagram')) platform = 'instagram';
+            else if (sourceUrl.includes('tiktok')) platform = 'tiktok';
+            else if (sourceUrl.includes('youtube') || sourceUrl.includes('youtu.be')) platform = 'youtube';
+        }
+
+        const model = models.flash;
+
+        const prompt = `Tu es un expert en analyse de recettes de cuisine.
+
+Analyse ce texte de recette et extrait les informations structurées :
+
+${recipeText}
+
+${sourceUrl ? `Source : ${sourceUrl} (${platform})` : ''}
+
+Retourne un JSON avec cette structure EXACTE :
+{
+  "title": "Nom de la recette",
+  "description": "Description courte et appétissante (max 100 caractères)",
+  "ingredients": ["ingrédient 1 avec quantité", "ingrédient 2 avec quantité", ...],
+  "instructions": ["étape 1", "étape 2", ...],
+  "prepTime": 30,
+  "calories": 450,
+  "proteins": 35,
+  "carbs": 40,
+  "fats": 15
+}
+
+RÈGLES STRICTES :
+- Titre clair et accrocheur
+- Extraire TOUS les ingrédients avec quantités précises
+- Extraire TOUTES les étapes dans l'ordre
+- Si les macros ne sont pas mentionnées, estime-les de façon réaliste
+- Temps de préparation réaliste (15-60 min)
+- Calories entre 200-800, protéines 15-60g, glucides 20-100g, lipides 10-40g
+
+Retourne UNIQUEMENT le JSON, sans markdown ni texte supplémentaire.`;
+
+        const result = await model.generateContent(prompt);
+        const response = result.response;
+        const responseText = extractTextFromResponse(response);
+
+        // Clean response
+        let jsonText = responseText.trim();
+        if (jsonText.startsWith('```json')) {
+            jsonText = jsonText.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+        } else if (jsonText.startsWith('```')) {
+            jsonText = jsonText.replace(/```\n?/g, '');
+        }
+
+        const recipeData = JSON.parse(jsonText);
+
+        // Generate AI image based on the recipe
+        console.log('Generating image for:', recipeData.title);
+        const imageResult = await generateFoodImage(
+            `${recipeData.title}, ${recipeData.description}, professional food photography, appetizing, high quality, realistic`
+        );
+        console.log('Image generated:', imageResult.success);
+
+        const extractedRecipe: ExtractedRecipe = {
+            ...recipeData,
+            imageUrl: imageResult.image || '',
+            originalUrl: sourceUrl || '',
+            platform,
+        };
+
+        return {
+            success: true,
+            recipe: extractedRecipe,
+        };
+    } catch (error) {
+        console.error('Error extracting recipe from text:', error);
+        return {
+            success: false,
+            error: 'Impossible de traiter la recette. Vérifiez le format.',
+        };
+    }
+}
+
+/**
  * Extract recipe from social media URL using AI
- * Note: This is a simplified version. In production, you'd need:
- * - Web scraping with proper API access or puppeteer
- * - Handle authentication and rate limits
- * - Respect robots.txt and terms of service
+ * DEPRECATED: Use extractRecipeFromText instead
  */
 export async function extractRecipeFromUrl(url: string): Promise<{
     success: boolean;

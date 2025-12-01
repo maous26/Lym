@@ -9,6 +9,7 @@ import Image from 'next/image';
 export default function ShareRecipePage() {
     const router = useRouter();
     const [url, setUrl] = useState('');
+    const [recipeText, setRecipeText] = useState('');
     const [isExtracting, setIsExtracting] = useState(false);
     const [extractedRecipe, setExtractedRecipe] = useState<any>(null);
     const [error, setError] = useState('');
@@ -21,11 +22,8 @@ export default function ShareRecipePage() {
     };
 
     const handleExtract = async () => {
-        if (!url.trim()) return;
-
-        const platform = detectPlatform(url);
-        if (!platform) {
-            setError('Lien non supporté. Utilisez Instagram, TikTok ou YouTube.');
+        if (!recipeText.trim()) {
+            setError('Veuillez coller le texte de la recette');
             return;
         }
 
@@ -33,12 +31,13 @@ export default function ShareRecipePage() {
         setError('');
 
         try {
-            const result = await extractRecipeFromUrl(url);
+            const { extractRecipeFromText } = await import('@/app/actions/recipe-extractor');
+            const result = await extractRecipeFromText(recipeText, url);
 
             if (result.success && result.recipe) {
                 setExtractedRecipe(result.recipe);
             } else {
-                setError(result.error || 'Impossible d\'extraire la recette');
+                setError(result.error || 'Impossible de traiter la recette');
             }
         } catch (err) {
             console.error(err);
@@ -107,24 +106,24 @@ export default function ShareRecipePage() {
                                 <div>
                                     <h2 className="font-bold text-gray-900 mb-2">Comment ça marche ?</h2>
                                     <ol className="text-sm text-gray-600 space-y-2">
-                                        <li>1. Copiez le lien d'une recette Instagram, TikTok ou YouTube</li>
-                                        <li>2. L'IA extrait automatiquement les ingrédients et étapes</li>
-                                        <li>3. Une nouvelle photo est générée pour votre recette</li>
-                                        <li>4. Les macros sont calculés automatiquement</li>
+                                        <li>1. Trouvez une recette sur Instagram, TikTok ou YouTube</li>
+                                        <li>2. Copiez le TEXTE de la recette (ingrédients + étapes)</li>
+                                        <li>3. Collez-le ci-dessous avec le lien source (optionnel)</li>
+                                        <li>4. L'IA génère une belle photo et calcule les macros</li>
                                         <li>5. Partagez dans la communauté !</li>
                                     </ol>
                                 </div>
                             </div>
                         </div>
 
-                        {/* URL Input */}
+                        {/* Recipe Input */}
                         <div className="bg-white rounded-2xl p-6 shadow-sm">
-                            <label className="block text-sm font-medium text-gray-700 mb-3">
-                                Lien de la recette
-                            </label>
-
-                            <div className="flex gap-2 mb-4">
-                                <div className="flex-1 relative">
+                            {/* URL Input (optional) */}
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Lien source <span className="text-gray-400 font-normal">(optionnel)</span>
+                                </label>
+                                <div className="relative">
                                     <input
                                         type="text"
                                         inputMode="url"
@@ -133,40 +132,73 @@ export default function ShareRecipePage() {
                                             setUrl(e.target.value);
                                             setError('');
                                         }}
-                                        onPaste={(e) => {
-                                            const pastedText = e.clipboardData.getData('text');
-                                            setUrl(pastedText);
-                                            setError('');
-                                        }}
-                                        placeholder="Collez ici le lien Instagram, TikTok ou YouTube"
+                                        placeholder="https://instagram.com/..."
                                         autoComplete="off"
                                         autoCorrect="off"
                                         autoCapitalize="off"
                                         spellCheck="false"
-                                        className="w-full p-4 pl-12 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-0 transition-all outline-none text-gray-900 bg-white"
+                                        className="w-full p-3 pl-10 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-0 transition-all outline-none text-gray-900 bg-white text-sm"
                                     />
-                                    <div className="absolute left-4 top-1/2 -translate-y-1/2">
-                                        {url ? getPlatformIcon(url) : <Link2 size={20} className="text-gray-400" />}
+                                    <div className="absolute left-3 top-1/2 -translate-y-1/2">
+                                        {url ? getPlatformIcon(url) : <Link2 size={16} className="text-gray-400" />}
                                     </div>
                                 </div>
-                                <button
-                                    onClick={handleExtract}
-                                    disabled={!url.trim() || isExtracting}
-                                    className="px-6 py-4 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                                >
-                                    {isExtracting ? (
-                                        <>
-                                            <Loader2 className="animate-spin" size={20} />
-                                            Extraction...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Sparkles size={20} />
-                                            Extraire
-                                        </>
-                                    )}
-                                </button>
                             </div>
+
+                            {/* Recipe Text (required) */}
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Texte de la recette <span className="text-red-500">*</span>
+                                </label>
+                                <textarea
+                                    value={recipeText}
+                                    onChange={(e) => {
+                                        setRecipeText(e.target.value);
+                                        setError('');
+                                    }}
+                                    placeholder="Collez ici le texte complet de la recette (titre, ingrédients, étapes)...
+
+Exemple :
+Poulet rôti au citron
+
+Ingrédients :
+- 1 poulet entier
+- 2 citrons
+- 3 gousses d'ail
+...
+
+Instructions :
+1. Préchauffer le four...
+2. Assaisonner le poulet...
+..."
+                                    autoComplete="off"
+                                    autoCorrect="off"
+                                    spellCheck="false"
+                                    rows={12}
+                                    className="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-0 transition-all outline-none text-gray-900 bg-white resize-none"
+                                />
+                                <p className="text-xs text-gray-500 mt-1">
+                                    {recipeText.length} caractères
+                                </p>
+                            </div>
+
+                            <button
+                                onClick={handleExtract}
+                                disabled={!recipeText.trim() || isExtracting}
+                                className="w-full px-6 py-4 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            >
+                                {isExtracting ? (
+                                    <>
+                                        <Loader2 className="animate-spin" size={20} />
+                                        Traitement en cours...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Sparkles size={20} />
+                                        Générer la recette
+                                    </>
+                                )}
+                            </button>
 
                             {error && (
                                 <div className="flex items-start gap-2 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
