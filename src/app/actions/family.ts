@@ -408,13 +408,13 @@ export async function joinFamilyWithCode(inviteCode: string, userId: string) {
  * Calculer les besoins nutritionnels selon l'âge, sexe, activité
  * Basé sur les recommandations ANSES (France)
  */
-export function calculateNutritionalNeeds(params: {
+export async function calculateNutritionalNeeds(params: {
     birthDate: Date;
     gender: 'male' | 'female' | 'other';
     weight: number;
     height: number;
     activityLevel: 'sedentary' | 'light' | 'moderate' | 'active' | 'athlete';
-}): NutritionalNeeds {
+}): Promise<NutritionalNeeds> {
     const age = getAge(params.birthDate);
     const ageCategory = getAgeCategory(params.birthDate);
     const { gender, weight, height, activityLevel } = params;

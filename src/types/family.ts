@@ -564,8 +564,8 @@ export interface MemberHealthScore {
     micronutrientsStatus: {
         [nutrient: string]: 'low' | 'adequate' | 'high';
     };
-    
-    weight Trend?: 'increasing' | 'stable' | 'decreasing';
+
+    weightTrend?: 'increasing' | 'stable' | 'decreasing';
     alerts: string[];
 }
 
