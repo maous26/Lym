@@ -318,3 +318,376 @@ model ValidatedMeal {
   @@index([userId, status])
   @@index([mealPlanId])
 }
+
+// ==========================================
+// MODE FAMILLE - ARCHITECTURE PROFESSIONNELLE
+// ==========================================
+
+// Famille - Groupe principal
+model Family {
+  id        String   @id @default(uuid())
+  
+  // Informations famille
+  name      String   // "Famille Dupont"
+  adminId   String   // Utilisateur créateur/admin
+  
+  // Configuration
+  maxMembers    Int @default(6)        // Limite membres (plan pricing)
+  subscriptionTier String @default("starter") // "starter", "plus", "premium"
+  
+  // Préférences globales
+  weeklyBudget  Float?                 // Budget courses hebdomadaire
+  sharedGoals   String?                // JSON: ["health", "economy", "ecology"]
+  
+  // Gestion invitations
+  inviteCode    String @unique         // Code pour rejoindre (ex: "DUPONT2025")
+  invitesUsed   Int @default(0)
+  
+  // Relations
+  members       FamilyMember[]
+  mealPlans     FamilyMealPlan[]
+  shoppingLists FamilyShoppingList[]
+  challenges    FamilyChallenge[]
+  
+  // Métadonnées
+  isActive      Boolean @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@index([adminId])
+  @@index([inviteCode])
+}
+
+// Membre de la famille avec profil nutritionnel complet
+model FamilyMember {
+  id        String   @id @default(uuid())
+  
+  familyId  String
+  family    Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  
+  userId    String   // Lien vers User (si compte créé)
+  
+  // Informations personnelles
+  firstName String
+  nickname  String?                    // Surnom affectueux
+  avatarUrl String?                    // Photo profil
+  
+  // Profil démographique
+  birthDate DateTime                   // Pour calcul âge précis
+  gender    String                     // "male", "female", "other"
+  role      String                     // "admin", "parent", "child", "teen", "senior"
+  
+  // Données anthropométriques
+  height    Float?                     // cm
+  weight    Float?                     // kg
+  targetWeight Float?                  // kg (si objectif poids)
+  
+  // Niveau activité physique
+  activityLevel String @default("moderate") // "sedentary", "light", "moderate", "active", "athlete"
+  sportsFrequency Int?                 // Fois par semaine
+  
+  // Objectifs nutritionnels personnalisés
+  primaryGoal    String?               // "weight_loss", "muscle_gain", "maintenance", "growth"
+  targetCalories Int?                  // kcal/jour (calculé automatiquement)
+  targetProteins Int?                  // g/jour
+  targetCarbs    Int?                  // g/jour
+  targetFats     Int?                  // g/jour
+  
+  // Spécificités médicales/nutritionnelles
+  allergies      String?               // JSON: ["lactose", "gluten", "arachides"]
+  intolerances   String?               // JSON: ["fructose", "histamine"]
+  medicalConditions String?            // JSON: ["diabetes_t2", "hypertension", "celiac"]
+  medications    String?               // JSON: [{name, impact_nutrition}]
+  
+  // Préférences alimentaires
+  dietType      String @default("omnivore") // "omnivore", "vegetarian", "vegan", "pescatarian", "keto", "paleo"
+  likedFoods    String?                // JSON: ["pasta", "chicken", "broccoli"]
+  dislikedFoods String?                // JSON: ["liver", "eggplant"]
+  
+  // Données santé suivies
+  healthTracking String?                // JSON: {last_checkup, blood_pressure, glucose}
+  growthData     String?                // JSON: courbe croissance (pour enfants)
+  
+  // Statut et permissions
+  canEditMealPlan Boolean @default(true)
+  canSeeFamilyData Boolean @default(true)
+  receiveNotifications Boolean @default(true)
+  isActive       Boolean @default(true)
+  
+  // Relations
+  mealLogs       FamilyMemberMealLog[]
+  weightLogs     FamilyMemberWeightLog[]
+  
+  // Métadonnées
+  joinedAt      DateTime @default(now())
+  lastActiveAt  DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@unique([familyId, userId])
+  @@index([familyId])
+  @@index([userId])
+  @@index([role])
+}
+
+// Plan de repas familial (multi-profils)
+model FamilyMealPlan {
+  id        String   @id @default(uuid())
+  
+  familyId  String
+  family    Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  
+  // Informations plan
+  name      String                     // "Semaine du 1er janvier"
+  planMode  String   @default("unified") // "unified", "hybrid", "individual"
+  
+  // Période
+  startDate DateTime
+  endDate   DateTime
+  
+  // Configuration
+  mealsPerDay  Int @default(4)         // breakfast, lunch, snack, dinner
+  daysCount    Int @default(7)
+  
+  // Données du plan (JSON avec structure pour chaque membre)
+  planData  String                     // JSON: {members: {memberId: {day1: {breakfast: {...}}}}}
+  
+  // Objectifs et contraintes
+  totalBudget   Float?
+  targetVariety Int?                   // Score variété visé (0-100)
+  preferences   String?                // JSON: {avoid_waste, local_products, seasonal}
+  
+  // Statistiques
+  totalCalories      Int?              // Somme famille par jour
+  estimatedCost      Float?
+  varietyScore       Int?              // 0-100
+  nutritionalBalance Int?              // 0-100 (équilibre global)
+  
+  // Statut
+  status     String @default("draft")  // "draft", "active", "completed", "archived"
+  generatedBy String?                  // "ai", "manual", "template"
+  
+  // Feedback
+  rating     Int?                      // 1-5 étoiles
+  feedback   String?                   // Commentaires famille
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([familyId, status])
+  @@index([startDate, endDate])
+}
+
+// Journal alimentaire par membre (suivi médical)
+model FamilyMemberMealLog {
+  id        String   @id @default(uuid())
+  
+  memberId  String
+  member    FamilyMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  
+  // Identifiant repas
+  mealDate  DateTime
+  mealType  String                     // "breakfast", "lunch", "snack", "dinner"
+  mealName  String
+  
+  // Composition nutritionnelle
+  calories  Int
+  proteins  Int
+  carbs     Int
+  fats      Int
+  fiber     Int?
+  sugar     Int?
+  salt      Int?                       // mg
+  
+  // Micronutriments (pour suivi médical)
+  calcium   Int?                       // mg
+  iron      Int?                       // mg
+  vitaminD  Int?                       // UI
+  vitaminC  Int?                       // mg
+  
+  // Contexte
+  portion   Float @default(1.0)        // Taille portion (1.0 = normale)
+  location  String?                    // "home", "school", "restaurant"
+  wasPlanned Boolean @default(false)   // Issu du plan ou imprévu
+  
+  // Satisfaction
+  liked     Boolean?
+  comment   String?
+  
+  // Photo (pour suivi visuel)
+  photoUrl  String?
+  
+  createdAt DateTime @default(now())
+  
+  @@index([memberId, mealDate])
+  @@index([mealDate])
+}
+
+// Suivi poids et courbes de croissance (médical)
+model FamilyMemberWeightLog {
+  id        String   @id @default(uuid())
+  
+  memberId  String
+  member    FamilyMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  
+  // Données mesure
+  measuredAt DateTime
+  weight    Float                      // kg
+  height    Float?                     // cm (surtout pour enfants)
+  
+  // Composition corporelle (si disponible)
+  bodyFat   Float?                     // %
+  muscleMass Float?                    // %
+  bmi       Float?                     // Calculé automatiquement
+  
+  // Courbes de croissance (enfants)
+  growthPercentile Float?             // Percentile selon courbes INSERM
+  heightPercentile Float?
+  
+  // Contexte
+  source    String @default("manual")  // "manual", "smart_scale", "pediatrician"
+  notes     String?
+  
+  createdAt DateTime @default(now())
+  
+  @@index([memberId, measuredAt])
+}
+
+// Liste de courses familiale partagée
+model FamilyShoppingList {
+  id        String   @id @default(uuid())
+  
+  familyId  String
+  family    Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  
+  // Informations
+  name      String                     // "Courses semaine 1"
+  weekStartDate DateTime
+  
+  // Items (JSON agrégé)
+  items     String                     // JSON: [{ingredient, quantity, unit, category, checked, assignedTo}]
+  
+  // Organisation
+  categories String?                   // JSON: rayon ordering
+  
+  // Budget
+  estimatedCost Float?
+  actualCost    Float?
+  
+  // Collaboration
+  sharedWith    String?                // JSON: [memberIds]
+  lastModifiedBy String?
+  
+  // Statut
+  status    String @default("active")  // "active", "shopping", "completed", "archived"
+  completedAt DateTime?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([familyId, weekStartDate])
+  @@index([status])
+}
+
+// Challenges familiaux (gamification)
+model FamilyChallenge {
+  id        String   @id @default(uuid())
+  
+  familyId  String
+  family    Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  
+  // Informations challenge
+  title     String                     // "Semaine zéro gaspillage"
+  description String?
+  type      String                     // "nutrition", "ecology", "budget", "activity"
+  icon      String?                    // Emoji ou icon name
+  
+  // Période
+  startDate DateTime
+  endDate   DateTime
+  
+  // Objectif
+  goal      String                     // JSON: {type, target, current}
+  reward    String?                    // "badge", "points", "real_prize"
+  
+  // Participants
+  participants String?                 // JSON: [memberIds] ou "all"
+  
+  // Progression
+  progress  Int @default(0)            // 0-100%
+  status    String @default("active")  // "active", "completed", "failed", "cancelled"
+  
+  // Résultats
+  completedAt DateTime?
+  winner      String?                  // memberId si compétition
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([familyId, status])
+  @@index([endDate])
+}
+
+// Invitations famille (gestion sécurisée)
+model FamilyInvitation {
+  id        String   @id @default(uuid())
+  
+  familyId  String
+  
+  // Destinataire
+  email     String
+  firstName String?
+  role      String @default("member")  // "parent", "child", "teen"
+  
+  // Sécurité
+  token     String @unique             // Token unique pour accepter
+  expiresAt DateTime
+  
+  // Statut
+  status    String @default("pending") // "pending", "accepted", "declined", "expired"
+  acceptedAt DateTime?
+  declinedAt DateTime?
+  
+  // Métadonnées
+  sentBy    String                     // userId qui a envoyé
+  message   String?                    // Message personnalisé
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([familyId])
+  @@index([email])
+  @@index([token])
+  @@index([status])
+}
+
+// Notifications famille (ciblées par membre)
+model FamilyNotification {
+  id        String   @id @default(uuid())
+  
+  familyId  String
+  memberId  String?                    // null = toute la famille
+  
+  // Contenu
+  type      String                     // "alert", "tip", "achievement", "reminder"
+  title     String
+  message   String
+  icon      String?
+  
+  // Priorité et catégorie
+  priority  String @default("normal")  // "low", "normal", "high", "urgent"
+  category  String                     // "nutrition", "health", "activity", "budget"
+  
+  // Actions
+  actionUrl String?
+  actionLabel String?
+  
+  // Statut
+  isRead    Boolean @default(false)
+  readAt    DateTime?
+  
+  createdAt DateTime @default(now())
+  
+  @@index([familyId, memberId, isRead])
+  @@index([createdAt])
+}
