@@ -9,6 +9,7 @@ import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 export function StepFamilyMode() {
+    // FamilLYM Mode Selection Step
     const { profile, updateProfile, nextStep, setStep } = useOnboardingStore();
     const { setFamilyMode } = useFamilyStore();
     const [selectedMode, setSelectedMode] = useState<'solo' | 'family' | null>(null);
