@@ -117,11 +117,12 @@ export function FamilyDashboard() {
                                         <p className="text-xs text-gray-500">{age} ans</p>
                                     </div>
                                 </div>
-                                
-                                {member.targetCalories && (
-                                    <div className="bg-gray-50 rounded-lg px-2 py-1">
-                                        <p className="text-xs text-gray-600">
-                                            <span className="font-medium text-gray-900">{member.targetCalories}</span> kcal/jour
+
+                                {/* Allergies si présentes */}
+                                {(member.allergies?.length > 0 || member.intolerances?.length > 0) && (
+                                    <div className="bg-red-50 rounded-lg px-2 py-1">
+                                        <p className="text-xs text-red-700 font-medium">
+                                            ⚠️ Allergies
                                         </p>
                                     </div>
                                 )}
@@ -133,35 +134,46 @@ export function FamilyDashboard() {
 
             {/* Stats rapides */}
             <div>
-                <h3 className="font-bold text-gray-900 mb-3">Vue d'ensemble</h3>
-                
-                <div className="grid grid-cols-2 gap-3">
+                <h3 className="font-bold text-gray-900 mb-3">Repas & Courses</h3>
+
+                <div className="space-y-3">
                     {/* Plan actif */}
-                    <div className="bg-white rounded-2xl p-4 border-2 border-gray-100">
-                        <div className="flex items-center gap-2 mb-2">
-                            <Calendar size={16} className="text-indigo-500" />
-                            <span className="text-xs text-gray-600 font-medium">Plan Actif</span>
+                    <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-4 border-2 border-purple-100">
+                        <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                                <Calendar size={18} className="text-purple-600" />
+                                <span className="text-sm text-gray-800 font-semibold">Plan de repas communs</span>
+                            </div>
                         </div>
-                        <p className="text-xl font-bold text-gray-900">
-                            {activeMealPlan ? '7 jours' : 'Aucun'}
-                        </p>
-                        {activeMealPlan && (
-                            <p className="text-xs text-gray-500 mt-1">
-                                {activeMealPlan.mealsPerDay * 7} repas planifiés
-                            </p>
+                        {activeMealPlan ? (
+                            <div>
+                                <p className="text-2xl font-bold text-purple-900 mb-1">7 jours planifiés</p>
+                                <p className="text-xs text-purple-700">
+                                    {activeMealPlan.mealsPerDay * 7} repas • Portions adaptées automatiquement
+                                </p>
+                            </div>
+                        ) : (
+                            <div>
+                                <p className="text-lg font-bold text-gray-600 mb-1">Aucun plan actif</p>
+                                <p className="text-xs text-gray-500">Créez votre premier plan de repas famille</p>
+                            </div>
                         )}
                     </div>
 
-                    {/* Budget */}
-                    <div className="bg-white rounded-2xl p-4 border-2 border-gray-100">
-                        <div className="flex items-center gap-2 mb-2">
-                            <DollarSign size={16} className="text-green-500" />
-                            <span className="text-xs text-gray-600 font-medium">Budget</span>
+                    {/* Budget courses */}
+                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-4 border-2 border-green-100">
+                        <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                                <DollarSign size={18} className="text-green-600" />
+                                <span className="text-sm text-gray-800 font-semibold">Budget courses</span>
+                            </div>
                         </div>
-                        <p className="text-xl font-bold text-gray-900">
+                        <p className="text-2xl font-bold text-green-900 mb-1">
                             {family.weeklyBudget ? `${family.weeklyBudget}€` : 'Non défini'}
                         </p>
-                        <p className="text-xs text-gray-500 mt-1">par semaine</p>
+                        <p className="text-xs text-green-700">
+                            {family.weeklyBudget ? 'par semaine • Liste optimisée' : 'Définissez votre budget pour optimiser vos courses'}
+                        </p>
                     </div>
                 </div>
             </div>

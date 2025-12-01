@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useOnboardingStore } from '@/store/onboarding-store';
 import { useFamilyStore } from '@/store/family-store';
 import { OnboardingLayout } from './OnboardingLayout';
-import { User, Plus, Trash2, Baby, Users, Heart } from 'lucide-react';
+import { User, Plus, Trash2, Baby, Users, Heart, AlertCircle, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
@@ -14,6 +14,8 @@ interface FamilyMemberForm {
     birthYear: string;
     gender: 'male' | 'female' | 'other' | '';
     role: 'parent' | 'child' | 'teen' | 'senior' | '';
+    allergies: string[];
+    allergyInput?: string;
 }
 
 export function StepFamilySetup() {
@@ -26,6 +28,7 @@ export function StepFamilySetup() {
             birthYear: profile.age ? (new Date().getFullYear() - profile.age).toString() : '',
             gender: profile.gender || '',
             role: 'parent',
+            allergies: profile.allergies || [],
         },
     ]);
 
@@ -38,6 +41,7 @@ export function StepFamilySetup() {
                 birthYear: '',
                 gender: '',
                 role: '',
+                allergies: [],
             },
         ]);
     };
@@ -48,9 +52,31 @@ export function StepFamilySetup() {
         }
     };
 
-    const updateMember = (id: string, field: string, value: string) => {
+    const updateMember = (id: string, field: string, value: any) => {
         setMembers(
             members.map((m) => (m.id === id ? { ...m, [field]: value } : m))
+        );
+    };
+
+    const addAllergy = (memberId: string, allergyInput: string) => {
+        if (allergyInput.trim()) {
+            setMembers(
+                members.map((m) =>
+                    m.id === memberId
+                        ? { ...m, allergies: [...m.allergies, allergyInput.trim()], allergyInput: '' }
+                        : m
+                )
+            );
+        }
+    };
+
+    const removeAllergy = (memberId: string, allergyIndex: number) => {
+        setMembers(
+            members.map((m) =>
+                m.id === memberId
+                    ? { ...m, allergies: m.allergies.filter((_, i) => i !== allergyIndex) }
+                    : m
+            )
         );
     };
 
@@ -97,7 +123,7 @@ export function StepFamilySetup() {
                 activityLevel: 'moderate' as const,
                 primaryGoal: null,
                 dietType: 'omnivore',
-                allergies: [],
+                allergies: m.allergies,
                 intolerances: [],
                 medicalConditions: [],
                 likedFoods: [],
@@ -260,6 +286,57 @@ export function StepFamilySetup() {
                                             </button>
                                         );
                                     })}
+                                </div>
+
+                                {/* Allergies */}
+                                <div className="space-y-2 pt-2 border-t border-gray-100">
+                                    <label className="text-xs font-medium text-gray-600 flex items-center gap-1">
+                                        <AlertCircle size={12} className="text-red-500" />
+                                        Allergies alimentaires
+                                    </label>
+
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            value={member.allergyInput || ''}
+                                            onChange={(e) => updateMember(member.id, 'allergyInput', e.target.value)}
+                                            onKeyPress={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    e.preventDefault();
+                                                    addAllergy(member.id, member.allergyInput || '');
+                                                }
+                                            }}
+                                            placeholder="Ex: Gluten, Arachides..."
+                                            className="flex-1 p-2 rounded-lg border border-gray-200 bg-gray-50 focus:border-purple-400 focus:bg-white focus:ring-0 transition-all outline-none text-xs"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => addAllergy(member.id, member.allergyInput || '')}
+                                            className="px-3 py-2 bg-purple-500 text-white rounded-lg text-xs font-medium hover:bg-purple-600 transition-all"
+                                        >
+                                            +
+                                        </button>
+                                    </div>
+
+                                    {member.allergies.length > 0 && (
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {member.allergies.map((allergy, allergyIndex) => (
+                                                <div
+                                                    key={allergyIndex}
+                                                    className="bg-red-50 border border-red-200 text-red-700 px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1"
+                                                >
+                                                    {allergy}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removeAllergy(member.id, allergyIndex)}
+                                                        className="hover:bg-red-200 rounded-full p-0.5 transition-colors"
+                                                    >
+                                                        <X size={10} />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </motion.div>
