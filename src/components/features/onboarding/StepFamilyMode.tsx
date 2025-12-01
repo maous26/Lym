@@ -54,7 +54,7 @@ export function StepFamilyMode() {
 
     return (
         <OnboardingLayout
-            title="Comment souhaitez-vous utiliser Lym ?"
+            title="Votre Expérience ✨"
             subtitle="Choisissez le mode qui vous correspond"
         >
             <div className="space-y-4">
