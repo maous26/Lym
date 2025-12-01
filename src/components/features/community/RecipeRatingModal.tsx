@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Star, Send, Check } from 'lucide-react';
 import { rateRecipe } from '@/app/actions/recipes';
-import { updateUserRanking } from '@/app/actions/ranking';
+import { updateUserRankingStats } from '@/app/actions/ranking';
 import { cn } from '@/lib/utils';
 
 interface RecipeRatingModalProps {
@@ -41,7 +41,7 @@ export function RecipeRatingModal({
             if (result.success) {
                 // Update creator's ranking if available
                 if (creatorId) {
-                    await updateUserRanking(creatorId);
+                    await updateUserRankingStats(creatorId);
                 }
 
                 setSubmitted(true);

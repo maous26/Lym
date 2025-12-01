@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import { calculateLevel, getLevelName, LEVEL_THRESHOLDS } from '@/lib/ranking-utils';
 
 // ==========================================
 // CONSTANTES DE CALCUL DU SCORE
@@ -13,12 +14,6 @@ const POINTS = {
     RATING_RECEIVED: 10,          // +10 pts par note reçue
     GOOD_RATING_BONUS: 15,        // +15 pts si note >= 4
     DISH_OF_THE_WEEK: 100,        // +100 pts si plat de la semaine
-};
-
-const LEVEL_THRESHOLDS = {
-    1: 0,      // Débutant: 0-299 pts
-    2: 300,    // Confirmé: 300-999 pts
-    3: 1000,   // Expert: 1000+ pts
 };
 
 // ==========================================
@@ -44,21 +39,6 @@ export interface UserRankingData {
 // ==========================================
 // FONCTIONS UTILITAIRES
 // ==========================================
-
-function calculateLevel(points: number): number {
-    if (points >= LEVEL_THRESHOLDS[3]) return 3;
-    if (points >= LEVEL_THRESHOLDS[2]) return 2;
-    return 1;
-}
-
-function getLevelName(level: number): string {
-    const names: Record<number, string> = {
-        1: 'Apprenti Chef',
-        2: 'Chef Confirmé',
-        3: 'Chef Expert',
-    };
-    return names[level] || 'Apprenti Chef';
-}
 
 function calculateBadges(stats: {
     recipesCount: number;
@@ -310,15 +290,3 @@ export async function getDishOfTheWeek() {
         return null;
     }
 }
-
-/**
- * Obtenir les infos de niveau pour l'affichage
- */
-export function getLevelInfo(level: number): { name: string; nextLevel: number | null; pointsNeeded: number } {
-    const name = getLevelName(level);
-    const nextLevel = level < 3 ? level + 1 : null;
-    const pointsNeeded = nextLevel ? LEVEL_THRESHOLDS[nextLevel as keyof typeof LEVEL_THRESHOLDS] : 0;
-    
-    return { name, nextLevel, pointsNeeded };
-}
-
