@@ -2,21 +2,30 @@
 
 import { useEffect } from 'react';
 import { useOnboardingStore } from '@/store/onboarding-store';
+import { useFamilyStore } from '@/store/family-store';
 import { motion } from 'framer-motion';
 import { CheckCircle, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export const StepAnalysis = () => {
     const router = useRouter();
+    const { isFamilyMode } = useFamilyStore();
 
     useEffect(() => {
         // Simulate AI Analysis
         const timer = setTimeout(() => {
-            router.push('/'); // Redirect to Dashboard
+            // Rediriger vers /family si mode famille, sinon vers dashboard
+            if (isFamilyMode) {
+                console.log('🎉 Mode famille activé - Redirection vers /family');
+                router.push('/family');
+            } else {
+                console.log('🎉 Mode solo - Redirection vers dashboard');
+                router.push('/');
+            }
         }, 3000);
 
         return () => clearTimeout(timer);
-    }, [router]);
+    }, [router, isFamilyMode]);
 
     return (
         <div className="flex flex-col h-full justify-center items-center text-center px-6">

@@ -223,7 +223,7 @@ Retourne UNIQUEMENT le JSON, sans markdown ni texte supplémentaire.`;
  * Save extracted recipe to database
  */
 export async function saveExtractedRecipe(
-    recipe: ExtractedRecipe, 
+    recipe: ExtractedRecipe,
     userId: string = 'default',
     userName: string = 'Anonyme'
 ) {

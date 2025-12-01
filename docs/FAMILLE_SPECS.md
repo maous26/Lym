@@ -247,3 +247,4 @@ Ex : Allergie latex → Alerte sur avocat, banane, kiwi
 *Ce document évolue avec les retours utilisateurs et les avancées médicales.*
 
 
+

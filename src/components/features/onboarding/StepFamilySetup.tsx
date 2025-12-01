@@ -62,10 +62,68 @@ export function StepFamilySetup() {
         );
     };
 
-    const handleContinue = () => {
-        // TODO: Sauvegarder la famille et les membres
-        console.log('Family:', { familyName, members });
-        nextStep();
+    const handleContinue = async () => {
+        try {
+            // Créer une famille temporaire dans le store (sans DB pour l'instant)
+            const tempFamily = {
+                id: `temp-family-${Date.now()}`,
+                name: familyName,
+                adminId: 'temp-admin',
+                inviteCode: 'TEMP1234',
+                subscriptionTier: 'starter' as const,
+                maxMembers: 6,
+                weeklyBudget: null,
+                sharedGoals: [],
+                isActive: true,
+                invitesUsed: 0,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+            };
+
+            // Créer les membres temporaires
+            const tempMembers = members.map((m, index) => ({
+                id: `temp-member-${Date.now()}-${index}`,
+                familyId: tempFamily.id,
+                userId: index === 0 ? 'temp-admin' : `temp-user-${index}`,
+                firstName: m.firstName,
+                birthDate: new Date(parseInt(m.birthYear), 0, 1),
+                gender: m.gender as 'male' | 'female' | 'other',
+                role: m.role as 'parent' | 'child' | 'teen' | 'senior',
+                nickname: null,
+                avatarUrl: null,
+                height: null,
+                weight: null,
+                targetWeight: null,
+                activityLevel: 'moderate' as const,
+                primaryGoal: null,
+                dietType: 'omnivore',
+                allergies: [],
+                intolerances: [],
+                medicalConditions: [],
+                likedFoods: [],
+                dislikedFoods: [],
+                targetCalories: 2000,
+                targetProteins: 150,
+                targetCarbs: 200,
+                targetFats: 65,
+                isActive: true,
+                joinedAt: new Date(),
+                createdAt: new Date(),
+                updatedAt: new Date(),
+            }));
+
+            // Sauvegarder dans le store
+            const { setFamily, setMembers } = useFamilyStore.getState();
+            setFamily(tempFamily as any);
+            setMembers(tempMembers as any);
+
+            console.log('✅ Famille créée:', { family: tempFamily, members: tempMembers });
+
+            nextStep();
+        } catch (error) {
+            console.error('❌ Erreur lors de la création:', error);
+            alert('Erreur lors de la création de la famille');
+        }
     };
 
     const roleOptions = [
@@ -232,5 +290,6 @@ export function StepFamilySetup() {
         </OnboardingLayout>
     );
 }
+
 
 
