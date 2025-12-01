@@ -82,9 +82,16 @@ function calculateTDEE(profile: OnboardingProfile): number | null {
         'athlete': 1.9
     };
 
-    const multiplier = profile.activityLevel
+    let multiplier = profile.activityLevel
         ? activityMultipliers[profile.activityLevel] || 1.55
         : 1.55;
+
+    // Ajustement fin basé sur l'intensité du sport déclarée
+    if (profile.sportIntensity === 'high') {
+        multiplier += 0.1; // +10% environ pour haute intensité
+    } else if (profile.sportIntensity === 'low') {
+        multiplier -= 0.05; // -5% pour faible intensité
+    }
 
     return Math.round(bmr * multiplier);
 }
