@@ -77,8 +77,6 @@ export function StepFamilySetup() {
 
     return (
         <OnboardingLayout
-            step={3}
-            totalSteps={10}
             title="Composez votre famille"
             subtitle="Ajoutez les membres pour des plans personnalisés"
         >
@@ -224,7 +222,7 @@ export function StepFamilySetup() {
                 >
                     Continuer
                 </button>
-                
+
                 {!canContinue() && members.length < 2 && (
                     <p className="text-xs text-gray-500 text-center mt-2">
                         Ajoutez au moins un autre membre pour le mode famille
@@ -234,4 +232,5 @@ export function StepFamilySetup() {
         </OnboardingLayout>
     );
 }
+
 

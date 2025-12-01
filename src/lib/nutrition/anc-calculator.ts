@@ -416,3 +416,4 @@ export function detectCrossAllergies(allergies: string[]): string[] {
     return crossAllergies;
 }
 
+

@@ -1,6 +1,6 @@
 "use client";
 
-import { Home, UtensilsCrossed, BarChart3, User, Bot } from 'lucide-react';
+import { Home, UtensilsCrossed, BarChart3, User, Bot, Users } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
@@ -8,7 +8,7 @@ import { motion } from 'framer-motion';
 const navItems = [
     { icon: Home, label: 'Accueil', path: '/' },
     { icon: UtensilsCrossed, label: 'Repas', path: '/meals' },
-    { icon: Bot, label: 'Coach', path: '/coach' },
+    { icon: Users, label: 'FamilLYM', path: '/family' },
     { icon: BarChart3, label: 'Progrès', path: '/progress' },
     { icon: User, label: 'Profil', path: '/profile' },
 ];

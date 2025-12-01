@@ -46,7 +46,7 @@ export const useOnboardingStore = create<OnboardingState>()(
     persist(
         (set, get) => ({
             currentStep: 0,
-            totalSteps: 7,
+            totalSteps: 9,
             profile: initialProfile,
             _hasHydrated: false,
 

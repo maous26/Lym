@@ -91,7 +91,7 @@ export function FamilyModeWidget() {
                     <Users size={24} className="text-white" />
                 </div>
                 <div className="flex-1">
-                    <h3 className="text-lg font-bold text-gray-900 mb-1">Mode Famille</h3>
+                    <h3 className="text-lg font-bold text-gray-900 mb-1">FamilLYM</h3>
                     <p className="text-sm text-gray-600">
                         Gérez la nutrition de toute votre famille en un seul endroit
                     </p>
@@ -121,10 +121,11 @@ export function FamilyModeWidget() {
 
             {/* CTA */}
             <button className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 rounded-xl font-bold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 group-hover:scale-[1.02]">
-                Activer le Mode Famille
+                Activer FamilLYM
                 <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
             </button>
         </motion.div>
     );
 }
+
 

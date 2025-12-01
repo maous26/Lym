@@ -104,9 +104,9 @@ export default function FamilyPage() {
                             <div>
                                 <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                                     <Users size={24} className="text-purple-600" />
-                                    {family.name}
+                                    FamilLYM
                                 </h1>
-                                <p className="text-xs text-gray-500">Mode Famille actif</p>
+                                <p className="text-xs text-gray-500">{family.name}</p>
                             </div>
                         </div>
                         <button

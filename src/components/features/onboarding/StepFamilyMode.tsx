@@ -9,17 +9,17 @@ import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 export function StepFamilyMode() {
-    const { profile, updateProfile, nextStep } = useOnboardingStore();
+    const { profile, updateProfile, nextStep, setStep } = useOnboardingStore();
     const { setFamilyMode } = useFamilyStore();
     const [selectedMode, setSelectedMode] = useState<'solo' | 'family' | null>(null);
 
     const handleSelectMode = (mode: 'solo' | 'family') => {
         setSelectedMode(mode);
         setFamilyMode(mode === 'family');
-        
-        // Si mode solo, on continue directement
+
+        // Si mode solo, on saute l'étape de setup famille (step 2) et on va direct à BasicInfo (step 3)
         if (mode === 'solo') {
-            setTimeout(() => nextStep(), 300);
+            setTimeout(() => setStep(3), 300);
         }
     };
 
@@ -39,7 +39,7 @@ export function StepFamilyMode() {
         {
             id: 'family',
             icon: Users,
-            title: 'Mode Famille',
+            title: 'FamilLYM',
             subtitle: 'Pour toute la famille',
             description: 'Gestion multi-profils, plans adaptés par membre',
             features: ['3-6 membres', 'Plans personnalisés', 'Liste courses commune', 'Dashboard famille'],
@@ -53,8 +53,6 @@ export function StepFamilyMode() {
 
     return (
         <OnboardingLayout
-            step={2}
-            totalSteps={10}
             title="Comment souhaitez-vous utiliser Lym ?"
             subtitle="Choisissez le mode qui vous correspond"
         >
@@ -95,9 +93,9 @@ export function StepFamilyMode() {
                                         ? `bg-gradient-to-r ${mode.color} shadow-md`
                                         : mode.bgColor
                                 )}>
-                                    <Icon 
-                                        size={28} 
-                                        className={isSelected ? "text-white" : "text-gray-700"} 
+                                    <Icon
+                                        size={28}
+                                        className={isSelected ? "text-white" : "text-gray-700"}
                                         strokeWidth={2}
                                     />
                                 </div>
@@ -109,7 +107,7 @@ export function StepFamilyMode() {
                                             <h3 className="text-xl font-bold text-gray-900">{mode.title}</h3>
                                             <p className="text-sm text-gray-500">{mode.subtitle}</p>
                                         </div>
-                                        
+
                                         {/* Check si sélectionné */}
                                         {isSelected && (
                                             <motion.div
@@ -198,4 +196,5 @@ export function StepFamilyMode() {
         </OnboardingLayout>
     );
 }
+
 

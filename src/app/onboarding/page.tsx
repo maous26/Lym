@@ -2,6 +2,8 @@
 
 import { useOnboardingStore } from '@/store/onboarding-store';
 import { StepWelcome } from '@/components/features/onboarding/StepWelcome';
+import { StepFamilyMode } from '@/components/features/onboarding/StepFamilyMode';
+import { StepFamilySetup } from '@/components/features/onboarding/StepFamilySetup';
 import { StepBasicInfo } from '@/components/features/onboarding/StepBasicInfo';
 import { StepGoals } from '@/components/features/onboarding/StepGoals';
 import { StepActivity } from '@/components/features/onboarding/StepActivity';
@@ -23,12 +25,14 @@ export default function OnboardingPage() {
     return (
         <div className="h-screen w-full bg-white">
             {currentStep === 0 && <div className="h-full p-6 pt-12"><StepWelcome /></div>}
-            {currentStep === 1 && <StepBasicInfo />}
-            {currentStep === 2 && <StepGoals />}
-            {currentStep === 3 && <StepActivity />}
-            {currentStep === 4 && <StepDiet />}
-            {currentStep === 5 && <StepCooking />}
-            {currentStep === 6 && <StepAnalysis />}
+            {currentStep === 1 && <StepFamilyMode />}
+            {currentStep === 2 && <StepFamilySetup />}
+            {currentStep === 3 && <StepBasicInfo />}
+            {currentStep === 4 && <StepGoals />}
+            {currentStep === 5 && <StepActivity />}
+            {currentStep === 6 && <StepDiet />}
+            {currentStep === 7 && <StepCooking />}
+            {currentStep === 8 && <StepAnalysis />}
         </div>
     );
 }

@@ -586,3 +586,4 @@ export interface Trend {
     isPositive: boolean;        // Si tendance est bonne ou mauvaise
 }
 
+

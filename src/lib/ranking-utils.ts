@@ -40,3 +40,4 @@ export function getLevelInfo(level: number): { name: string; nextLevel: number |
     return { name, nextLevel, pointsNeeded };
 }
 
+
