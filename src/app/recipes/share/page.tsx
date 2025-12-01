@@ -126,14 +126,24 @@ export default function ShareRecipePage() {
                             <div className="flex gap-2 mb-4">
                                 <div className="flex-1 relative">
                                     <input
-                                        type="url"
+                                        type="text"
+                                        inputMode="url"
                                         value={url}
                                         onChange={(e) => {
                                             setUrl(e.target.value);
                                             setError('');
                                         }}
-                                        placeholder="https://www.instagram.com/p/..."
-                                        className="w-full p-4 pl-12 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-0 transition-all outline-none"
+                                        onPaste={(e) => {
+                                            const pastedText = e.clipboardData.getData('text');
+                                            setUrl(pastedText);
+                                            setError('');
+                                        }}
+                                        placeholder="Collez ici le lien Instagram, TikTok ou YouTube"
+                                        autoComplete="off"
+                                        autoCorrect="off"
+                                        autoCapitalize="off"
+                                        spellCheck="false"
+                                        className="w-full p-4 pl-12 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-0 transition-all outline-none text-gray-900 bg-white"
                                     />
                                     <div className="absolute left-4 top-1/2 -translate-y-1/2">
                                         {url ? getPlatformIcon(url) : <Link2 size={20} className="text-gray-400" />}

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Users, Trophy, Plus, ArrowRight, ChefHat, Star, Crown, Medal, Link2 } from 'lucide-react';
+import { Users, Trophy, ArrowRight, ChefHat, Star, Crown, Medal, Link2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useOnboardingStore } from '@/store/onboarding-store';
 import { getOrCreateUserRanking, getUserRank, type UserRankingData } from '@/app/actions/ranking';
@@ -155,50 +155,44 @@ export function CommunityWidget() {
                     </div>
 
                     {/* Main Actions */}
-                    <div className="grid grid-cols-2 gap-3 mb-3">
-                        <button
-                            onClick={() => router.push('/recipes/create')}
-                            className="flex flex-col items-center justify-center p-3 bg-indigo-50 rounded-xl border-2 border-indigo-100 hover:border-indigo-300 hover:bg-indigo-100 transition-all group"
-                        >
-                            <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center mb-2 shadow-sm group-hover:scale-110 transition-transform text-indigo-600">
-                                <Plus size={20} strokeWidth={3} />
-                            </div>
-                            <span className="font-bold text-sm text-indigo-900">Créer</span>
-                            <span className="text-xs text-indigo-600">+50 pts</span>
-                        </button>
-
+                    <div className="space-y-3">
+                        {/* Classement Button */}
                         <button
                             onClick={() => router.push('/community')}
-                            className="flex flex-col items-center justify-center p-3 bg-purple-50 rounded-xl border-2 border-purple-100 hover:border-purple-300 hover:bg-purple-100 transition-all group"
+                            className="w-full flex items-center justify-center gap-3 p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl border-2 border-purple-100 hover:border-purple-300 hover:shadow-md transition-all group"
                         >
-                            <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center mb-2 shadow-sm group-hover:scale-110 transition-transform text-purple-600">
-                                <Users size={20} strokeWidth={3} />
+                            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                                <Users size={24} className="text-purple-600" />
                             </div>
-                            <span className="font-bold text-sm text-purple-900">Classement</span>
-                            <span className="text-xs text-purple-600">Top 10</span>
+                            <div className="text-left flex-1">
+                                <span className="font-bold text-base text-gray-900 block">Voir le Classement</span>
+                                <span className="text-xs text-purple-600">Top 10 des Chefs</span>
+                            </div>
+                            <ArrowRight size={20} className="text-purple-600" />
+                        </button>
+
+                        {/* Share from Link Button */}
+                        <button
+                            onClick={() => router.push('/recipes/share')}
+                            className="w-full flex items-center justify-center gap-3 p-4 bg-gradient-to-r from-orange-50 to-pink-50 rounded-xl border-2 border-orange-100 hover:border-orange-300 hover:shadow-md transition-all group"
+                        >
+                            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                                <Link2 size={24} className="text-orange-600" />
+                            </div>
+                            <div className="text-left flex-1">
+                                <span className="font-bold text-base text-gray-900 block">Partager une Recette</span>
+                                <span className="text-xs text-orange-600">Instagram, TikTok, YouTube</span>
+                            </div>
+                            <ArrowRight size={20} className="text-orange-600" />
                         </button>
                     </div>
-
-                    {/* Share from Link Button */}
-                    <button
-                        onClick={() => router.push('/recipes/share')}
-                        className="w-full flex items-center justify-center gap-2 p-3 bg-gradient-to-r from-orange-50 to-pink-50 rounded-xl border-2 border-orange-100 hover:border-orange-300 hover:shadow-md transition-all group"
-                    >
-                        <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
-                            <Link2 size={16} className="text-orange-600" />
-                        </div>
-                        <div className="text-left">
-                            <span className="font-bold text-sm text-gray-900 block">Partager depuis un lien</span>
-                            <span className="text-xs text-orange-600">Instagram, TikTok, YouTube</span>
-                        </div>
-                    </button>
 
                     {/* Points Info */}
                     <div className="mt-4 p-3 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl">
                         <p className="text-xs text-gray-600">
                             <span className="font-medium">Comment gagner des points ?</span>
                             <br />
-                            📸 +20 pts avec photo • ⭐ +15 pts note ≥4 • 🏆 +100 pts plat de la semaine
+                            🔗 +50 pts par recette partagée • 📸 +20 pts avec photo IA • ⭐ +10 pts par note reçue • 🏆 +100 pts plat de la semaine
                         </p>
                     </div>
                 </div>
