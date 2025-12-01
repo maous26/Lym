@@ -9,8 +9,9 @@ import { getFamilyNotifications } from '@/app/actions/family-coach';
 import { FamilyDashboard } from '@/components/features/family/FamilyDashboard';
 import { FamilyNotifications } from '@/components/features/family/FamilyNotifications';
 import { BottomNav } from '@/components/ui/BottomNav';
-import { Users, Settings, Plus, Calendar, ShoppingCart, ArrowLeft } from 'lucide-react';
+import { Users, Settings, Plus, Calendar, ShoppingCart, ArrowLeft, Bell } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
 export default function FamilyPage() {
     const router = useRouter();
