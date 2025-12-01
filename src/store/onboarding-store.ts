@@ -40,6 +40,11 @@ const initialProfile: UserProfile = {
     fastingSchedule: { type: 'none' },
     weeklyBudget: undefined,
     pricePreference: 'balanced',
+    sportType: undefined,
+    sportFrequency: undefined,
+    sportIntensity: undefined,
+    favoriteFoods: [],
+    favoriteCuisines: [],
 };
 
 export const useOnboardingStore = create<OnboardingState>()(

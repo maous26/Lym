@@ -5,7 +5,7 @@ import { useOnboardingStore } from '@/store/onboarding-store';
 import { OnboardingLayout } from './OnboardingLayout';
 import { DietType, FastingType } from '@/types/user';
 import { cn } from '@/lib/utils';
-import { Utensils, Timer, Clock } from 'lucide-react';
+import { Utensils, Timer, Clock, Heart } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const diets: { id: DietType; label: string }[] = [
@@ -25,7 +25,7 @@ const fastingTypes: { id: FastingType; label: string; desc: string; window?: str
 ];
 
 const timeSlots = [
-    '06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00', 
+    '06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00',
     '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00'
 ];
 
@@ -33,7 +33,7 @@ export const StepDiet = () => {
     const { profile, updateProfile, nextStep } = useOnboardingStore();
     const [eatingWindowStart, setEatingWindowStart] = useState(profile.fastingSchedule?.eatingWindowStart || '12:00');
     const [eatingWindowEnd, setEatingWindowEnd] = useState(profile.fastingSchedule?.eatingWindowEnd || '20:00');
-    
+
     const selectedFasting = profile.fastingSchedule?.type || 'none';
     const showTimeSelector = selectedFasting !== 'none' && selectedFasting !== '5_2';
 
@@ -41,17 +41,17 @@ export const StepDiet = () => {
         // Définir des fenêtres par défaut selon le type
         let defaultStart = '12:00';
         let defaultEnd = '20:00';
-        
+
         if (type === '18_6') {
             defaultEnd = '18:00';
         } else if (type === '20_4') {
             defaultStart = '14:00';
             defaultEnd = '18:00';
         }
-        
+
         setEatingWindowStart(defaultStart);
         setEatingWindowEnd(defaultEnd);
-        
+
         updateProfile({
             fastingSchedule: {
                 type,
@@ -67,7 +67,7 @@ export const StepDiet = () => {
         } else {
             setEatingWindowEnd(value);
         }
-        
+
         updateProfile({
             fastingSchedule: {
                 type: selectedFasting,
@@ -153,7 +153,7 @@ export const StepDiet = () => {
                                             <Clock size={16} />
                                             Votre fenêtre alimentaire
                                         </div>
-                                        
+
                                         <div className="flex items-center gap-3">
                                             <div className="flex-1">
                                                 <label className="text-xs text-gray-500 mb-1 block">Début</label>
@@ -181,7 +181,7 @@ export const StepDiet = () => {
                                                 </select>
                                             </div>
                                         </div>
-                                        
+
                                         <p className="text-xs text-gray-600">
                                             💡 L'IA adaptera vos repas pour respecter votre fenêtre de {eatingWindowStart} à {eatingWindowEnd}.
                                         </p>
@@ -195,6 +195,36 @@ export const StepDiet = () => {
                                 💡 Les jours de restriction (500 kcal), l'IA vous proposera des repas légers et nutritifs.
                             </div>
                         )}
+                    </div>
+
+                    {/* Food Preferences */}
+                    <div className="space-y-4 pt-4 border-t border-gray-100">
+                        <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                            <Heart size={16} className="text-red-500" />
+                            Vos préférences (Optionnel)
+                        </div>
+
+                        <div className="space-y-3">
+                            <div>
+                                <label className="text-xs text-gray-500 mb-1 block">Vos aliments préférés</label>
+                                <textarea
+                                    value={profile.favoriteFoods?.join(', ') || ''}
+                                    onChange={(e) => updateProfile({ favoriteFoods: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })}
+                                    placeholder="Ex: Avocat, Saumon, Patate douce, Chocolat noir..."
+                                    className="w-full p-3 rounded-xl border border-gray-200 text-sm min-h-[80px] focus:border-primary-500 focus:ring-0 outline-none resize-none"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="text-xs text-gray-500 mb-1 block">Vos plats ou cuisines préférés</label>
+                                <textarea
+                                    value={profile.favoriteCuisines?.join(', ') || ''}
+                                    onChange={(e) => updateProfile({ favoriteCuisines: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })}
+                                    placeholder="Ex: Cuisine italienne, Curry, Sushi, Lasagnes..."
+                                    className="w-full p-3 rounded-xl border border-gray-200 text-sm min-h-[80px] focus:border-primary-500 focus:ring-0 outline-none resize-none"
+                                />
+                            </div>
+                        </div>
                     </div>
 
                 </div>

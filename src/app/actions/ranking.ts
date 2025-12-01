@@ -67,24 +67,24 @@ function calculateBadges(stats: {
     dishOfTheWeekCount: number;
 }): string[] {
     const badges: string[] = [];
-    
+
     // Badges basés sur le nombre de recettes
     if (stats.recipesCount >= 1) badges.push('first_recipe');
     if (stats.recipesCount >= 10) badges.push('prolific_chef');
     if (stats.recipesCount >= 50) badges.push('master_chef');
-    
+
     // Badges photos
     if (stats.recipesWithPhotos >= 5) badges.push('photo_lover');
     if (stats.recipesWithPhotos >= 20) badges.push('instagram_chef');
-    
+
     // Badges notes
     if (stats.averageRating >= 4.5) badges.push('top_rated');
     if (stats.averageRating >= 4.8) badges.push('five_star_chef');
-    
+
     // Badges plat de la semaine
     if (stats.dishOfTheWeekCount >= 1) badges.push('weekly_star');
     if (stats.dishOfTheWeekCount >= 5) badges.push('trending_chef');
-    
+
     return badges;
 }
 
@@ -100,7 +100,7 @@ export async function getOrCreateUserRanking(userId: string, userName?: string):
         let ranking = await prisma.userRanking.findUnique({
             where: { userId },
         });
-        
+
         if (!ranking) {
             ranking = await prisma.userRanking.create({
                 data: {
@@ -109,7 +109,7 @@ export async function getOrCreateUserRanking(userId: string, userName?: string):
                 },
             });
         }
-        
+
         return {
             ...ranking,
             badges: ranking.badges ? JSON.parse(ranking.badges) : [],
@@ -132,18 +132,18 @@ export async function updateUserRankingStats(userId: string): Promise<UserRankin
                 ratings: true,
             },
         });
-        
+
         const recipesCount = recipes.length;
         const recipesWithPhotos = recipes.filter(r => r.imageUrl).length;
         const dishOfTheWeekCount = recipes.filter(r => r.isDishOfTheWeek).length;
-        
+
         // Calculer les notes
         const allRatings = recipes.flatMap(r => r.ratings);
         const totalRatingsReceived = allRatings.length;
         const averageRating = totalRatingsReceived > 0
             ? allRatings.reduce((sum, r) => sum + r.score, 0) / totalRatingsReceived
             : 0;
-        
+
         // Calculer les points
         let totalPoints = 0;
         totalPoints += recipesCount * POINTS.RECIPE_CREATED;
@@ -151,7 +151,7 @@ export async function updateUserRankingStats(userId: string): Promise<UserRankin
         totalPoints += totalRatingsReceived * POINTS.RATING_RECEIVED;
         totalPoints += allRatings.filter(r => r.score >= 4).length * POINTS.GOOD_RATING_BONUS;
         totalPoints += dishOfTheWeekCount * POINTS.DISH_OF_THE_WEEK;
-        
+
         // Calculer le niveau et les badges
         const level = calculateLevel(totalPoints);
         const badges = calculateBadges({
@@ -160,7 +160,7 @@ export async function updateUserRankingStats(userId: string): Promise<UserRankin
             averageRating,
             dishOfTheWeekCount,
         });
-        
+
         // Mettre à jour le ranking
         const ranking = await prisma.userRanking.upsert({
             where: { userId },
@@ -186,9 +186,9 @@ export async function updateUserRankingStats(userId: string): Promise<UserRankin
                 badges: JSON.stringify(badges),
             },
         });
-        
+
         revalidatePath('/community');
-        
+
         return {
             ...ranking,
             badges,
@@ -208,7 +208,7 @@ export async function getLeaderboard(limit: number = 10): Promise<UserRankingDat
             orderBy: { totalPoints: 'desc' },
             take: limit,
         });
-        
+
         return rankings.map((r, index) => ({
             ...r,
             badges: r.badges ? JSON.parse(r.badges) : [],
@@ -228,17 +228,17 @@ export async function getUserRank(userId: string): Promise<{ rank: number; total
         const userRanking = await prisma.userRanking.findUnique({
             where: { userId },
         });
-        
+
         if (!userRanking) return null;
-        
+
         const higherRanked = await prisma.userRanking.count({
             where: {
                 totalPoints: { gt: userRanking.totalPoints },
             },
         });
-        
+
         const total = await prisma.userRanking.count();
-        
+
         return {
             rank: higherRanked + 1,
             total,
@@ -259,7 +259,7 @@ export async function setDishOfTheWeek(recipeId: string): Promise<{ success: boo
             where: { isDishOfTheWeek: true },
             data: { isDishOfTheWeek: false },
         });
-        
+
         // Définir le nouveau plat de la semaine
         const recipe = await prisma.recipe.update({
             where: { id: recipeId },
@@ -268,14 +268,14 @@ export async function setDishOfTheWeek(recipeId: string): Promise<{ success: boo
                 dishOfTheWeekAt: new Date(),
             },
         });
-        
+
         // Mettre à jour les stats du créateur
         if (recipe.creatorId) {
             await updateUserRankingStats(recipe.creatorId);
         }
-        
+
         revalidatePath('/community');
-        
+
         return { success: true };
     } catch (error) {
         console.error('Error setting dish of the week:', error);
@@ -294,13 +294,13 @@ export async function getDishOfTheWeek() {
                 ratings: true,
             },
         });
-        
+
         if (!recipe) return null;
-        
+
         const avgRating = recipe.ratings.length > 0
             ? recipe.ratings.reduce((sum, r) => sum + r.score, 0) / recipe.ratings.length
             : 0;
-        
+
         return {
             ...recipe,
             avgRating,
@@ -314,11 +314,11 @@ export async function getDishOfTheWeek() {
 /**
  * Obtenir les infos de niveau pour l'affichage
  */
-export function getLevelInfo(level: number): { name: string; nextLevel: number | null; pointsNeeded: number } {
+export async function getLevelInfo(level: number): Promise<{ name: string; nextLevel: number | null; pointsNeeded: number }> {
     const name = getLevelName(level);
     const nextLevel = level < 3 ? level + 1 : null;
     const pointsNeeded = nextLevel ? LEVEL_THRESHOLDS[nextLevel as keyof typeof LEVEL_THRESHOLDS] : 0;
-    
+
     return { name, nextLevel, pointsNeeded };
 }
 
