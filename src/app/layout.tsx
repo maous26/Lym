@@ -5,6 +5,7 @@ import "./globals.css";
 import { cn } from "@/lib/utils";
 import { BottomNav } from "@/components/ui/BottomNav";
 import { FloatingCoachAvatar } from "@/components/features/coach/FloatingCoachAvatar";
+import { AuthProvider } from "@/components/providers/AuthProvider";
 import { usePathname } from 'next/navigation';
 import { useUserStore } from '@/store/user-store';
 
@@ -36,11 +37,13 @@ export default function RootLayout({
           inter.variable
         )}
       >
-        <main className="relative flex min-h-screen flex-col overflow-hidden">
-          {children}
-        </main>
-        {!hideNavbar && <BottomNav />}
-        <FloatingCoachAvatar />
+        <AuthProvider>
+          <main className="relative flex min-h-screen flex-col overflow-hidden">
+            {children}
+          </main>
+          {!hideNavbar && <BottomNav />}
+          <FloatingCoachAvatar />
+        </AuthProvider>
       </body>
     </html>
   );

@@ -1,55 +1,58 @@
 'use client';
 
-import { useState } from 'react';
-import { signIn } from 'next-auth/react';
+import { useState, useEffect } from 'react';
+import { signIn, useSession } from 'next-auth/react';
 import { MarketingCarousel } from '@/components/features/auth/MarketingCarousel';
-import { Mail, Chrome } from 'lucide-react';
+import { Chrome, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
-    const [email, setEmail] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [step, setStep] = useState<'carousel' | 'auth'>('carousel');
+    const [error, setError] = useState<string | null>(null);
     const router = useRouter();
+    const { status } = useSession();
 
-    const handleEmailSignIn = async (e: React.FormEvent) => {
-        e.preventDefault();
+    // Rediriger si déjà connecté
+    useEffect(() => {
+        if (status === 'authenticated') {
+            router.push('/auth/plan-selection');
+        }
+    }, [status, router]);
+
+    const handleGoogleSignIn = async () => {
         setIsLoading(true);
-
+        setError(null);
+        
         try {
-            const result = await signIn('email', {
-                email,
+            const result = await signIn('google', {
                 redirect: false,
+                callbackUrl: '/auth/plan-selection',
             });
 
-            if (result?.ok) {
-                // Email sent successfully
-                setEmail('');
-                // Show success message or redirect
-                router.push('/auth/verify-email?email=' + encodeURIComponent(email));
-            } else {
-                console.error('Sign in error:', result?.error);
+            if (result?.error) {
+                setError('Erreur lors de la connexion. Veuillez réessayer.');
+                console.error('Google sign in error:', result.error);
+            } else if (result?.url) {
+                router.push(result.url);
             }
         } catch (error) {
-            console.error('Error signing in:', error);
+            console.error('Google sign in error:', error);
+            setError('Une erreur inattendue s\'est produite.');
         } finally {
             setIsLoading(false);
         }
     };
 
-    const handleGoogleSignIn = async () => {
-        setIsLoading(true);
-        try {
-            await signIn('google', {
-                redirect: true,
-                callbackUrl: '/auth/plan-selection',
-            });
-        } catch (error) {
-            console.error('Google sign in error:', error);
-            setIsLoading(false);
-        }
-    };
+    // Afficher un loader si on vérifie la session
+    if (status === 'loading') {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center py-12 px-4">
@@ -85,55 +88,47 @@ export default function LoginPage() {
                         <div className="bg-white rounded-3xl shadow-2xl p-8 space-y-6">
                             <div className="text-center">
                                 <h2 className="text-3xl font-bold text-gray-900 mb-2">Se Connecter</h2>
-                                <p className="text-gray-600">Choisissez votre méthode de connexion</p>
+                                <p className="text-gray-600">Connectez-vous pour accéder à LYM</p>
                             </div>
 
-                            {/* Google Sign In */}
+                            {/* Afficher les erreurs */}
+                            {error && (
+                                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
+                                    {error}
+                                </div>
+                            )}
+
+                            {/* Bouton Google */}
                             <button
                                 onClick={handleGoogleSignIn}
                                 disabled={isLoading}
-                                className="w-full py-3 px-4 rounded-xl border-2 border-gray-200 hover:border-blue-500 hover:bg-blue-50 transition-all flex items-center justify-center gap-2 font-semibold text-gray-900 disabled:opacity-50"
+                                className="w-full py-4 px-4 rounded-xl bg-white border-2 border-gray-200 hover:border-blue-500 hover:bg-blue-50 transition-all flex items-center justify-center gap-3 font-semibold text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                <Chrome size={20} />
-                                Continuer avec Google
+                                {isLoading ? (
+                                    <>
+                                        <Loader2 className="w-5 h-5 animate-spin" />
+                                        Connexion en cours...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Chrome size={24} />
+                                        Continuer avec Google
+                                    </>
+                                )}
                             </button>
 
-                            {/* Divider */}
-                            <div className="flex items-center gap-4">
-                                <div className="flex-1 h-px bg-gray-200" />
-                                <span className="text-sm text-gray-500">Ou</span>
-                                <div className="flex-1 h-px bg-gray-200" />
-                            </div>
+                            {/* Informations */}
+                            <p className="text-center text-sm text-gray-500">
+                                En vous connectant, vous acceptez nos{' '}
+                                <a href="#" className="text-blue-600 hover:underline">
+                                    conditions d'utilisation
+                                </a>{' '}
+                                et notre{' '}
+                                <a href="#" className="text-blue-600 hover:underline">
+                                    politique de confidentialité
+                                </a>
+                            </p>
 
-                            {/* Email Sign In */}
-                            <form onSubmit={handleEmailSignIn} className="space-y-4">
-                                <div>
-                                    <label htmlFor="email" className="block text-sm font-semibold text-gray-900 mb-2">
-                                        Adresse Email
-                                    </label>
-                                    <input
-                                        id="email"
-                                        type="email"
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
-                                        placeholder="vous@email.com"
-                                        required
-                                        disabled={isLoading}
-                                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none disabled:opacity-50 transition-colors"
-                                    />
-                                </div>
-
-                                <button
-                                    type="submit"
-                                    disabled={isLoading || !email}
-                                    className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-semibold hover:shadow-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                                >
-                                    <Mail size={20} />
-                                    {isLoading ? 'Envoi...' : 'Continuer avec Email'}
-                                </button>
-                            </form>
-
-                            {/* Back Button */}
                             <button
                                 onClick={() => setStep('carousel')}
                                 className="w-full py-2 text-gray-600 hover:text-gray-900 font-semibold transition-colors"

@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { useUserStore } from '@/store/user-store';
 import { motion } from 'framer-motion';
-import { Check, Zap, Crown, Users, ArrowRight } from 'lucide-react';
+import { Check, Zap, Crown, Users, ArrowRight, Loader2 } from 'lucide-react';
 
 const plans = [
     {
@@ -62,24 +63,61 @@ const plans = [
 
 export default function PlanSelectionPage() {
     const router = useRouter();
-    const { setSubscriptionPlan, setActiveMode } = useUserStore();
+    const { data: session, status, update: updateSession } = useSession();
+    const { setSubscriptionPlan, setActiveMode, setUserId } = useUserStore();
     const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+
+    // Rediriger vers login si pas de session
+    useEffect(() => {
+        if (status === 'unauthenticated') {
+            router.push('/auth/login');
+        }
+    }, [status, router]);
+
+    // Synchroniser l'ID utilisateur avec le store
+    useEffect(() => {
+        if (session?.user?.id) {
+            setUserId(session.user.id);
+        }
+    }, [session?.user?.id, setUserId]);
 
     const handleSelectPlan = async (planId: string) => {
         setIsLoading(true);
         setSelectedPlan(planId);
 
-        // Set subscription plan in store
-        setSubscriptionPlan(planId as 'basic' | 'premium' | 'family');
+        try {
+            // Mettre à jour le plan dans le store local
+            setSubscriptionPlan(planId as 'basic' | 'premium' | 'family');
 
-        // Simulate API call to save plan
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+            // Mettre à jour la session NextAuth
+            await updateSession({ subscriptionPlan: planId });
 
-        // Redirect to mode selection
-        setActiveMode(null);
-        router.push('/mode-selection');
+            // Réinitialiser le mode actif pour la sélection
+            setActiveMode(null);
+
+            // Rediriger vers la sélection du mode
+            router.push('/mode-selection');
+        } catch (error) {
+            console.error('Erreur lors de la sélection du plan:', error);
+            setIsLoading(false);
+            setSelectedPlan(null);
+        }
     };
+
+    // Afficher un loader pendant la vérification de la session
+    if (status === 'loading') {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 flex items-center justify-center">
+                <Loader2 className="w-8 h-8 animate-spin text-white" />
+            </div>
+        );
+    }
+
+    // Ne rien afficher si non authentifié (redirection en cours)
+    if (status === 'unauthenticated') {
+        return null;
+    }
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 py-12 px-4">
@@ -88,8 +126,13 @@ export default function PlanSelectionPage() {
                 animate={{ opacity: 1, y: 0 }}
                 className="max-w-7xl mx-auto"
             >
-                {/* Header */}
+                {/* Header avec info utilisateur */}
                 <div className="text-center mb-12">
+                    {session?.user?.name && (
+                        <p className="text-lg text-gray-400 mb-2">
+                            Bienvenue, {session.user.name} 👋
+                        </p>
+                    )}
                     <h1 className="text-5xl font-bold text-white mb-4">
                         Choisissez Votre Plan
                     </h1>
@@ -158,7 +201,7 @@ export default function PlanSelectionPage() {
                                         {/* CTA Button */}
                                         <button
                                             onClick={() => handleSelectPlan(plan.id)}
-                                            disabled={isLoading && selectedPlan === plan.id}
+                                            disabled={isLoading}
                                             className={`w-full py-3 px-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2 mt-auto ${
                                                 plan.recommended
                                                     ? `bg-gradient-to-r ${plan.color} text-white hover:shadow-lg disabled:opacity-50`
@@ -167,7 +210,7 @@ export default function PlanSelectionPage() {
                                         >
                                             {isLoading && selectedPlan === plan.id ? (
                                                 <>
-                                                    <div className="animate-spin w-4 h-4 border-2 border-current border-t-transparent rounded-full" />
+                                                    <Loader2 className="w-4 h-4 animate-spin" />
                                                     Chargement...
                                                 </>
                                             ) : (
