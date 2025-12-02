@@ -137,7 +137,7 @@ export async function addFamilyMember(data: {
         }
 
         // Calculer les besoins nutritionnels
-        const needs = calculateNutritionalNeeds({
+        const needs = await calculateNutritionalNeeds({
             birthDate: data.birthDate,
             gender: data.gender,
             weight: data.weight || 70,
@@ -207,7 +207,7 @@ export async function updateFamilyMember(memberId: string, data: Partial<{
 
         // Recalculer besoins nutritionnels si poids/taille/activité changent
         if (data.weight || data.height || data.activityLevel) {
-            const needs = calculateNutritionalNeeds({
+            const needs = await calculateNutritionalNeeds({
                 birthDate: currentMember.birthDate,
                 gender: currentMember.gender as 'male' | 'female' | 'other',
                 weight: data.weight || currentMember.weight || 70,

@@ -46,8 +46,8 @@ export async function generateFamilyMealPlan(params: {
         const mealsPerDay = params.mealsPerDay || 4;
 
         // 2. Calculer les besoins nutritionnels de chaque membre
-        const memberNeeds = members.map((member: any) => {
-            const needs = calculateNutritionalNeeds({
+        const memberNeeds = await Promise.all(members.map(async (member: any) => {
+            const needs = await calculateNutritionalNeeds({
                 birthDate: member.birthDate,
                 gender: member.gender,
                 weight: member.weight || 70,
@@ -70,7 +70,7 @@ export async function generateFamilyMealPlan(params: {
                 likedFoods: member.likedFoods ? JSON.parse(member.likedFoods) : [],
                 dislikedFoods: member.dislikedFoods ? JSON.parse(member.dislikedFoods) : [],
             };
-        });
+        }));
 
         // 3. Générer les plans selon le mode
         let planData: FamilyMealPlanData;
