@@ -7,8 +7,9 @@ const config: CapacitorConfig = {
   server: {
     androidScheme: 'https',
     cleartext: true,
-    // Décommentez la ligne suivante et remplacez par votre IP locale pour le test sur appareil
-    // url: 'http://192.168.1.XX:3000', 
+    // Pour le dev local - l'app iOS rechargera depuis votre serveur Next.js
+    url: 'http://localhost:3002',
+    allowNavigation: ['http://localhost:3002', '*.google.com', '*.googleapis.com']
   }
 };
 

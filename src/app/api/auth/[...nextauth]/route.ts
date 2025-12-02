@@ -54,5 +54,4 @@ export const { handlers: GET, POST } = NextAuth({
       console.log("User signed in:", (user as any).email);
     },
   },
-  trustHost: true,
 });

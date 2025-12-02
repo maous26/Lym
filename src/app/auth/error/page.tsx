@@ -3,8 +3,9 @@
 import { useSearchParams } from 'next/navigation';
 import { useRouter } from 'next/navigation';
 import { AlertCircle } from 'lucide-react';
+import { Suspense } from 'react';
 
-export default function ErrorPage() {
+function ErrorContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const error = searchParams.get('error');
@@ -52,5 +53,13 @@ export default function ErrorPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ErrorPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-50 flex items-center justify-center"><div className="text-gray-600">Chargement...</div></div>}>
+      <ErrorContent />
+    </Suspense>
   );
 }
