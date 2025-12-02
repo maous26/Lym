@@ -75,7 +75,7 @@ export function FamilySummaryWidget() {
 
 // Widget: Plan de Repas Actuel
 export function FamilyMealPlanWidget() {
-    const activeMealPlan = null; // TODO: Implémenter activeMealPlan dans user-store
+    const activeMealPlan: { mealsPerDay: number } | null = null; // TODO: Implémenter activeMealPlan dans user-store
     const router = useRouter();
 
     return (
