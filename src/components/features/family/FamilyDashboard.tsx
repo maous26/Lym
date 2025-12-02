@@ -120,7 +120,7 @@ export function FamilyDashboard() {
                                 </div>
 
                                 {/* Allergies si présentes */}
-                                {(member.allergies?.length > 0 || member.intolerances?.length > 0) && (
+                                {((member.allergies as any)?.length > 0 || (member.intolerances as any)?.length > 0) && (
                                     <div className="bg-red-50 rounded-lg px-2 py-1">
                                         <p className="text-xs text-red-700 font-medium">
                                             ⚠️ Allergies
@@ -150,7 +150,7 @@ export function FamilyDashboard() {
                             <div>
                                 <p className="text-2xl font-bold text-purple-900 mb-1">7 jours planifiés</p>
                                 <p className="text-xs text-purple-700">
-                                    {activeMealPlan.mealsPerDay * 7} repas • Portions adaptées automatiquement
+                                    {(activeMealPlan as any).mealsPerDay * 7} repas • Portions adaptées automatiquement
                                 </p>
                             </div>
                         ) : (

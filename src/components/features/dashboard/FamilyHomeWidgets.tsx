@@ -78,6 +78,35 @@ export function FamilyMealPlanWidget() {
     const activeMealPlan: { mealsPerDay: number } | null = null; // TODO: Implémenter activeMealPlan dans user-store
     const router = useRouter();
 
+    // Guard against undefined activeMealPlan
+    if (!activeMealPlan) {
+        return (
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="bg-white rounded-3xl p-6 shadow-lg border-2 border-gray-100 hover:border-purple-200 transition-all cursor-pointer"
+                onClick={() => router.push('/family/plan')}
+            >
+                <div className="flex items-center gap-3 mb-4">
+                    <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center">
+                        <Calendar size={24} className="text-white" />
+                    </div>
+                    <div className="flex-1">
+                        <h3 className="font-bold text-gray-900">Plan de Repas</h3>
+                        <p className="text-xs text-gray-500">Repas communs pour toute la famille</p>
+                    </div>
+                </div>
+                <div className="text-center py-6">
+                    <p className="text-gray-500 text-sm mb-3">Aucun plan actif</p>
+                    <button className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-2 rounded-xl font-semibold text-sm hover:shadow-lg transition-all">
+                        Créer un plan
+                    </button>
+                </div>
+            </motion.div>
+        );
+    }
+
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -104,7 +133,7 @@ export function FamilyMealPlanWidget() {
                     </div>
                     <div className="flex items-center justify-between">
                         <span className="text-sm text-gray-600">Repas planifiés</span>
-                        <span className="font-bold text-gray-900">{activeMealPlan.mealsPerDay * 7}</span>
+                        <span className="font-bold text-gray-900">{(activeMealPlan as any).mealsPerDay * 7}</span>
                     </div>
                     <div className="mt-3 p-3 bg-purple-50 rounded-xl border border-purple-100">
                         <p className="text-xs text-purple-700 font-medium">

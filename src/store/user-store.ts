@@ -9,6 +9,7 @@ import type { Family, FamilyMember } from '@/types/family';
 // ==========================================
 
 export type ActiveMode = 'solo' | 'family' | null;
+export type SubscriptionPlan = 'basic' | 'premium' | 'family';
 
 interface UserState {
     // Utilisateur actuel
@@ -16,6 +17,9 @@ interface UserState {
 
     // Mode actif (solo ou famille)
     activeMode: ActiveMode;
+
+    // Subscription plan
+    subscriptionPlan: SubscriptionPlan;
 
     // PROFIL SOLO
     soloProfile: UserProfile | null;
@@ -34,6 +38,7 @@ interface UserState {
     // Actions générales
     setUserId: (userId: string) => void;
     setActiveMode: (mode: ActiveMode) => void;
+    setSubscriptionPlan: (plan: SubscriptionPlan) => void;
     setLoading: (loading: boolean) => void;
     setHasHydrated: (state: boolean) => void;
 
@@ -67,6 +72,7 @@ interface UserState {
 const initialState = {
     userId: null,
     activeMode: null,
+    subscriptionPlan: 'basic' as SubscriptionPlan,
     soloProfile: null,
     soloOnboardingCompleted: false,
     family: null,
@@ -89,6 +95,8 @@ export const useUserStore = create<UserState>()(
             setUserId: (userId) => set({ userId }),
 
             setActiveMode: (mode) => set({ activeMode: mode }),
+
+            setSubscriptionPlan: (plan) => set({ subscriptionPlan: plan }),
 
             setLoading: (loading) => set({ isLoading: loading }),
 
@@ -194,6 +202,7 @@ export const useUserStore = create<UserState>()(
             partialize: (state) => ({
                 userId: state.userId,
                 activeMode: state.activeMode,
+                subscriptionPlan: state.subscriptionPlan,
                 soloProfile: state.soloProfile,
                 soloOnboardingCompleted: state.soloOnboardingCompleted,
                 family: state.family,
@@ -260,4 +269,11 @@ export const useFamilyMembers = () => {
 export const useCanSwitchMode = () => {
     const canSwitchMode = useUserStore((state) => state.canSwitchMode);
     return canSwitchMode();
+};
+
+/**
+ * Hook pour obtenir le plan de subscription
+ */
+export const useSubscriptionPlan = () => {
+    return useUserStore((state) => state.subscriptionPlan);
 };
