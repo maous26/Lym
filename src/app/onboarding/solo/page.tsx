@@ -18,21 +18,13 @@ export default function SoloOnboardingPage() {
     const { profile: storeProfile } = useSoloOnboardingStore();
     const { setSoloProfile, completeSoloOnboarding, setActiveMode } = useUserStore();
 
-    // Gestion de la fin de l'onboarding
+    // Gestion de la fin de l'onboarding (après StepAnalysis)
+    // Note: Cette logique sera aussi appellée depuis StepAnalysis après 3 secondes
     useEffect(() => {
-        if (currentStep === useSoloOnboardingStore.getState().totalSteps) {
-            // Sauvegarder le profil solo dans le store principal
-            setSoloProfile(storeProfile as any);
-            completeSoloOnboarding();
-            setActiveMode('solo');
-
-            // Reset onboarding store
-            useSoloOnboardingStore.getState().reset();
-
-            // Rediriger vers la home
-            router.push('/');
-        }
-    }, [currentStep, storeProfile, setSoloProfile, completeSoloOnboarding, setActiveMode, router]);
+        const totalSteps = useSoloOnboardingStore.getState().totalSteps;
+        // On ne trigger la sauvegarde que si on retourne à la page d'accueil via la redirection
+        // StepAnalysis gère elle-même la redirection
+    }, []);
 
     const renderStep = () => {
         switch (currentStep) {

@@ -49,7 +49,7 @@ const initialProfile: Partial<UserProfile> = {
 
 export const useSoloOnboardingStore = create<SoloOnboardingState>((set, get) => ({
     currentStep: 0,
-    totalSteps: 8, // Ajusté pour le mode solo
+    totalSteps: 7, // 7 steps: Welcome(0), BasicInfo(1), Activity(2), Goals(3), Diet(4), Cooking(5), Analysis(6)
     profile: initialProfile,
 
     setStep: (step) => set({ currentStep: step }),

@@ -10,6 +10,12 @@ export function FamilyModeWidget() {
     const isFamilyMode = useIsFamilyMode();
     const family = useFamily();
     const members = useFamilyMembers();
+    const { hasFamilyProfile } = useUserStore();
+
+    // Si utilisateur a déjà un profil famille, cacher le CTA
+    if (hasFamilyProfile() && !isFamilyMode) {
+        return null;
+    }
 
     // Si mode famille est actif
     if (isFamilyMode && family) {

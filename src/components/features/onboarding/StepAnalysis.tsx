@@ -2,30 +2,32 @@
 
 import { useEffect } from 'react';
 import { useSoloOnboardingStore } from '@/store/solo-onboarding-store';
-import { useFamilyStore } from '@/store/family-store';
+import { useUserStore } from '@/store/user-store';
 import { motion } from 'framer-motion';
 import { CheckCircle, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export const StepAnalysis = () => {
     const router = useRouter();
-    const { isFamilyMode } = useFamilyStore();
+    const { setSoloProfile, completeSoloOnboarding } = useUserStore();
+    const { profile: storeProfile } = useSoloOnboardingStore();
 
     useEffect(() => {
         // Simulate AI Analysis
         const timer = setTimeout(() => {
-            // Rediriger vers /family si mode famille, sinon vers dashboard
-            if (isFamilyMode) {
-                console.log('🎉 Mode famille activé - Redirection vers /family');
-                router.push('/family');
-            } else {
-                console.log('🎉 Mode solo - Redirection vers dashboard');
-                router.push('/');
-            }
+            // Sauvegarder le profil solo (activeMode est déjà défini par ModeSelection)
+            setSoloProfile(storeProfile as any);
+            completeSoloOnboarding();
+
+            // Reset onboarding store
+            useSoloOnboardingStore.getState().reset();
+
+            console.log('🎉 Onboarding complété - Redirection vers le dashboard');
+            router.push('/');
         }, 3000);
 
         return () => clearTimeout(timer);
-    }, [router, isFamilyMode]);
+    }, [router, storeProfile, setSoloProfile, completeSoloOnboarding]);
 
     return (
         <div className="flex flex-col h-full justify-center items-center text-center px-6">

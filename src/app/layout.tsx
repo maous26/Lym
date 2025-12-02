@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { BottomNav } from "@/components/ui/BottomNav";
 import { FloatingCoachAvatar } from "@/components/features/coach/FloatingCoachAvatar";
 import { usePathname } from 'next/navigation';
+import { useUserStore } from '@/store/user-store';
 
 const inter = Inter({
   subsets: ["latin"],
@@ -18,9 +19,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   const pathname = usePathname();
+  const { _hasHydrated, hasSoloProfile, hasFamilyProfile } = useUserStore();
 
-  // Pages sans navbar
-  const hideNavbar = pathname === '/' || pathname === '/mode-selection';
+  // Pages sans navbar: mode-selection et accueil sans profil
+  const hideNavbar =
+    pathname === '/mode-selection' ||
+    (pathname === '/' && (!hasSoloProfile() && !hasFamilyProfile())) ||
+    pathname.startsWith('/onboarding');
 
   return (
     <html lang="fr">

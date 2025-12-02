@@ -4,18 +4,26 @@ import { Home, UtensilsCrossed, BarChart3, User, Bot, Users } from 'lucide-react
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
+import { useUserStore } from '@/store/user-store';
 
-const navItems = [
+const baseNavItems = [
     { icon: Home, label: 'Accueil', path: '/' },
     { icon: UtensilsCrossed, label: 'Repas', path: '/meals' },
-    { icon: Users, label: 'FamilLYM', path: '/family' },
     { icon: BarChart3, label: 'Progrès', path: '/progress' },
     { icon: User, label: 'Profil', path: '/profile' },
 ];
 
+const familyNavItem = { icon: Users, label: 'FamilLYM', path: '/family' };
+
 export const BottomNav = () => {
     const pathname = usePathname();
     const router = useRouter();
+    const { hasFamilyProfile } = useUserStore();
+
+    // Construire les items de nav en fonction des profils
+    const navItems = hasFamilyProfile()
+        ? [baseNavItems[0], baseNavItems[1], familyNavItem, baseNavItems[2], baseNavItems[3]]
+        : baseNavItems;
 
     if (pathname.startsWith('/onboarding')) return null;
 
