@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useOnboardingStore } from '@/store/onboarding-store';
+import { useSoloOnboardingStore } from '@/store/solo-onboarding-store';
 import { OnboardingLayout } from './OnboardingLayout';
 import { Goal } from '@/types/user';
 import { cn } from '@/lib/utils';
@@ -17,7 +17,7 @@ const goals: { id: Goal; label: string; icon: any; desc: string }[] = [
 ];
 
 export const StepGoals = () => {
-    const { profile, updateProfile, nextStep } = useOnboardingStore();
+    const { profile, updateProfile, nextStep } = useSoloOnboardingStore();
     const [weightLossKg, setWeightLossKg] = useState<number>(profile.weightLossGoalKg || 5);
     const [suggestedDuration, setSuggestedDuration] = useState<number>(0);
 

@@ -1,11 +1,11 @@
 "use client";
 
-import { useOnboardingStore } from '@/store/onboarding-store';
+import { useSoloOnboardingStore } from '@/store/solo-onboarding-store';
 import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 
 export const StepWelcome = () => {
-    const { nextStep } = useOnboardingStore();
+    const { nextStep } = useSoloOnboardingStore();
 
     return (
         <div className="flex flex-col h-full justify-center items-center text-center">

@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from 'react';
-import { useOnboardingStore } from '@/store/onboarding-store';
-import { useFamilyStore } from '@/store/family-store';
+import { useState, useEffect } from 'react';
+import { useFamilyOnboardingStore } from '@/store/family-onboarding-store';
 import { OnboardingLayout } from './OnboardingLayout';
 import { User, Plus, Trash2, Baby, Users, Heart, AlertCircle, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -19,16 +18,17 @@ interface FamilyMemberForm {
 }
 
 export function StepFamilySetup() {
-    const { profile } = useOnboardingStore();
-    const [familyName, setFamilyName] = useState(`Famille ${profile.name || ''}`);
+    const { familyName: storeFamilyName, setFamilyName, setMembers: storeSetMembers, setWeeklyBudget, nextStep } = useFamilyOnboardingStore();
+    const [familyName, setLocalFamilyName] = useState(storeFamilyName || 'Ma Famille');
+    const [weeklyBudget, setLocalWeeklyBudget] = useState<string>('');
     const [members, setMembers] = useState<FamilyMemberForm[]>([
         {
             id: '1',
-            firstName: profile.name || '',
-            birthYear: profile.age ? (new Date().getFullYear() - profile.age).toString() : '',
-            gender: profile.gender || '',
+            firstName: '',
+            birthYear: '',
+            gender: '',
             role: 'parent',
-            allergies: profile.allergies || [],
+            allergies: [],
         },
     ]);
 
@@ -90,68 +90,35 @@ export function StepFamilySetup() {
 
     const handleContinue = async () => {
         try {
-            // Créer une famille temporaire dans le store (sans DB pour l'instant)
-            const tempFamily = {
-                id: `temp-family-${Date.now()}`,
-                name: familyName,
-                adminId: 'temp-admin',
-                inviteCode: 'TEMP1234',
-                subscriptionTier: 'starter' as const,
-                maxMembers: 6,
-                weeklyBudget: null,
-                sharedGoals: [],
-                isActive: true,
-                invitesUsed: 0,
-                createdAt: new Date(),
-                updatedAt: new Date(),
-            };
+            // Sauvegarder dans le family-onboarding-store
+            setFamilyName(familyName);
 
-            // Créer les membres temporaires
-            const tempMembers = members.map((m, index) => ({
-                id: `temp-member-${Date.now()}-${index}`,
-                familyId: tempFamily.id,
-                userId: index === 0 ? 'temp-admin' : `temp-user-${index}`,
+            // Convertir les membres en format attendu par le store
+            const familyMembers = members.map((m, index) => ({
+                id: `member-${Date.now()}-${index}`,
                 firstName: m.firstName,
                 birthDate: new Date(parseInt(m.birthYear), 0, 1),
                 gender: m.gender as 'male' | 'female' | 'other',
                 role: m.role as 'parent' | 'child' | 'teen' | 'senior',
-                nickname: null,
-                avatarUrl: null,
-                height: null,
-                weight: null,
-                targetWeight: null,
-                activityLevel: 'moderate' as const,
-                primaryGoal: null,
-                dietType: 'omnivore',
                 allergies: m.allergies,
-                intolerances: [],
-                medicalConditions: [],
-                likedFoods: [],
-                dislikedFoods: [],
-                targetCalories: 2000,
-                targetProteins: 150,
-                targetCarbs: 200,
-                targetFats: 65,
-                isActive: true,
-                joinedAt: new Date(),
-                createdAt: new Date(),
-                updatedAt: new Date(),
+                activityLevel: 'moderate' as const,
+                dietType: 'omnivore' as const,
             }));
 
-            // Sauvegarder dans le store
-            const { setFamily, setMembers } = useFamilyStore.getState();
-            setFamily(tempFamily as any);
-            setMembers(tempMembers as any);
+            storeSetMembers(familyMembers);
 
-            console.log('✅ Famille créée:', { family: tempFamily, members: tempMembers });
+            // Budget hebdomadaire (optionnel pour l'instant)
+            if (weeklyBudget && !isNaN(parseFloat(weeklyBudget))) {
+                setWeeklyBudget(parseFloat(weeklyBudget));
+            }
 
-            // En mode famille, on saute directement à l'analyse (step 8)
-            // Car les infos individuelles ne sont pas nécessaires
-            const { setStep } = useOnboardingStore.getState();
-            setStep(8);
+            console.log('✅ Famille configurée:', { familyName, members: familyMembers });
+
+            // Passer à l'étape suivante (qui déclenchera la fin de l'onboarding)
+            nextStep();
         } catch (error) {
-            console.error('❌ Erreur lors de la création:', error);
-            alert('Erreur lors de la création de la famille');
+            console.error('❌ Erreur lors de la configuration:', error);
+            alert('Erreur lors de la configuration de la famille');
         }
     };
 
@@ -175,7 +142,7 @@ export function StepFamilySetup() {
                 <input
                     type="text"
                     value={familyName}
-                    onChange={(e) => setFamilyName(e.target.value)}
+                    onChange={(e) => setLocalFamilyName(e.target.value)}
                     placeholder="Famille Dupont"
                     className="w-full p-4 rounded-xl border-2 border-gray-200 bg-white focus:border-purple-500 focus:ring-0 transition-all outline-none font-medium"
                 />

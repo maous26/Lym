@@ -1,6 +1,6 @@
 "use client";
 
-import { useOnboardingStore } from '@/store/onboarding-store';
+import { useSoloOnboardingStore } from '@/store/solo-onboarding-store';
 import { OnboardingLayout } from './OnboardingLayout';
 import { ActivityLevel } from '@/types/user';
 import { cn } from '@/lib/utils';
@@ -16,7 +16,7 @@ const activities: { id: ActivityLevel; label: string; icon: any; desc: string }[
 ];
 
 export const StepActivity = () => {
-    const { profile, updateProfile, nextStep } = useOnboardingStore();
+    const { profile, updateProfile, nextStep } = useSoloOnboardingStore();
 
     return (
         <OnboardingLayout

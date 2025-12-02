@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { useOnboardingStore } from '@/store/onboarding-store';
+import { useSoloOnboardingStore } from '@/store/solo-onboarding-store';
 import { OnboardingLayout } from './OnboardingLayout';
 import { CookingSkillLevel } from '@/types/user';
 import { cn } from '@/lib/utils';
@@ -52,7 +52,7 @@ const skillLevels: { id: CookingSkillLevel; label: string; desc: string; icon: s
 ];
 
 export const StepCooking = () => {
-    const { profile, updateProfile, nextStep } = useOnboardingStore();
+    const { profile, updateProfile, nextStep } = useSoloOnboardingStore();
     const [cookingTimeWeekday, setCookingTimeWeekday] = useState(profile.cookingTimeWeekday || 30);
     const [cookingTimeWeekend, setCookingTimeWeekend] = useState(profile.cookingTimeWeekend || 60);
     const [weeklyBudget, setWeeklyBudget] = useState(profile.weeklyBudget || 100);

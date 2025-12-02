@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from 'react';
-import { useOnboardingStore } from '@/store/onboarding-store';
+import { useSoloOnboardingStore } from '@/store/solo-onboarding-store';
 import { useFamilyStore } from '@/store/family-store';
 import { motion } from 'framer-motion';
 import { CheckCircle, Loader2 } from 'lucide-react';

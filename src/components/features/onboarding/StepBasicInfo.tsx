@@ -1,12 +1,12 @@
 "use client";
 
-import { useOnboardingStore } from '@/store/onboarding-store';
+import { useSoloOnboardingStore } from '@/store/solo-onboarding-store';
 import { OnboardingLayout } from './OnboardingLayout';
 import { User, Ruler, Weight, Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export const StepBasicInfo = () => {
-    const { profile, updateProfile, nextStep } = useOnboardingStore();
+    const { profile, updateProfile, nextStep } = useSoloOnboardingStore();
 
     const isComplete = profile.name && profile.age && profile.gender && profile.height && profile.weight;
 

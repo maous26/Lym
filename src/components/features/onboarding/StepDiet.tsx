@@ -1,6 +1,6 @@
 "use client";
 
-import { useOnboardingStore } from '@/store/onboarding-store';
+import { useSoloOnboardingStore } from '@/store/solo-onboarding-store';
 import { OnboardingLayout } from './OnboardingLayout';
 import { DietType } from '@/types/user';
 import { cn } from '@/lib/utils';
@@ -16,7 +16,7 @@ const diets: { id: DietType; label: string }[] = [
 ];
 
 export const StepDiet = () => {
-    const { profile, updateProfile, nextStep } = useOnboardingStore();
+    const { profile, updateProfile, nextStep } = useSoloOnboardingStore();
     const [allergyInput, setAllergyInput] = useState('');
 
     const addAllergy = () => {
