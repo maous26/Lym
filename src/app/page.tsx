@@ -26,10 +26,10 @@ export default function Home() {
   const [isRedirecting, setIsRedirecting] = useState(false);
 
   useEffect(() => {
-    // Si pas de profil du tout, rediriger vers la sélection de mode
+    // Si pas de profil du tout, rediriger vers l'authentification
     if (_hasHydrated && !hasSoloProfile() && !hasFamilyProfile() && !isRedirecting) {
       setIsRedirecting(true);
-      router.push('/mode-selection');
+      router.push('/auth/login');
     }
   }, [_hasHydrated, hasSoloProfile, hasFamilyProfile, isRedirecting, router]);
 
