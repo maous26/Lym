@@ -49,6 +49,7 @@ const authConfig = {
       console.log("User signed in:", (user as any).email);
     },
   },
+  trustHost: true,
 };
 
 export const { handlers, auth, signIn, signOut } = NextAuth(authConfig);

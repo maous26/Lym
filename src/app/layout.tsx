@@ -21,8 +21,9 @@ export default function RootLayout({
   const pathname = usePathname();
   const { _hasHydrated, hasSoloProfile, hasFamilyProfile } = useUserStore();
 
-  // Pages sans navbar: mode-selection et accueil sans profil
+  // Pages sans navbar: authentification et mode-selection et accueil sans profil
   const hideNavbar =
+    pathname.startsWith('/auth/') ||
     pathname === '/mode-selection' ||
     (pathname === '/' && (!hasSoloProfile() && !hasFamilyProfile())) ||
     pathname.startsWith('/onboarding');
