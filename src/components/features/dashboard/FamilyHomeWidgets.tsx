@@ -4,8 +4,19 @@ import { useFamilyStore } from '@/store/family-store';
 import { Users, Calendar, ShoppingCart, ChefHat, TrendingUp, Heart, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { getAge } from '@/types/family';
 import { useRouter } from 'next/navigation';
+
+// Helper pour calculer l'âge à partir d'une date qui peut être string ou Date
+function getAge(birthDate: Date | string): number {
+    const today = new Date();
+    const birth = typeof birthDate === 'string' ? new Date(birthDate) : birthDate;
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+        age--;
+    }
+    return age;
+}
 
 // Widget: Résumé Famille
 export function FamilySummaryWidget() {
