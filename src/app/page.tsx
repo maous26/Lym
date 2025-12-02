@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useOnboardingStore } from '@/store/onboarding-store';
-import { useFamilyStore } from '@/store/family-store';
+import { useUserStore } from '@/store/user-store';
 import { PersonalizedMessage } from '@/components/features/dashboard/PersonalizedMessage';
 import { WeeklyOverview } from '@/components/features/dashboard/WeeklyOverview';
 import { MonthlyStats } from '@/components/features/dashboard/MonthlyStats';
@@ -22,17 +21,17 @@ import {
 import { Loader2 } from 'lucide-react';
 
 export default function Home() {
-  const { profile, _hasHydrated } = useOnboardingStore();
-  const { isFamilyMode } = useFamilyStore();
+  const { activeMode, _hasHydrated, hasSoloProfile, hasFamilyProfile } = useUserStore();
   const router = useRouter();
   const [isRedirecting, setIsRedirecting] = useState(false);
 
   useEffect(() => {
-    if (_hasHydrated && !profile.name && !isRedirecting) {
+    // Si pas de profil du tout, rediriger vers la sélection de mode
+    if (_hasHydrated && !hasSoloProfile() && !hasFamilyProfile() && !isRedirecting) {
       setIsRedirecting(true);
-      router.push('/onboarding');
+      router.push('/mode-selection');
     }
-  }, [profile.name, router, _hasHydrated, isRedirecting]);
+  }, [_hasHydrated, hasSoloProfile, hasFamilyProfile, isRedirecting, router]);
 
   // Show loading while store is hydrating
   if (!_hasHydrated) {
@@ -46,8 +45,8 @@ export default function Home() {
     );
   }
 
-  // Show loading while redirecting to onboarding
-  if (!profile.name || isRedirecting) {
+  // Show loading while redirecting
+  if (isRedirecting) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 via-white to-secondary-50">
         <div className="flex flex-col items-center gap-4">
@@ -59,7 +58,7 @@ export default function Home() {
   }
 
   // Mode Famille : Dashboard différent
-  if (isFamilyMode) {
+  if (activeMode === 'family') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 pb-32">
         <div className="container mx-auto px-4 max-w-md pt-8">
