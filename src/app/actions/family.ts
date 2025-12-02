@@ -312,7 +312,6 @@ export async function acceptFamilyInvitation(token: string, userId: string) {
     try {
         const invitation = await prisma.familyInvitation.findUnique({
             where: { token },
-            include: { family: true },
         });
 
         if (!invitation) {
