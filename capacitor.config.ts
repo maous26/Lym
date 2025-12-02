@@ -8,8 +8,9 @@ const config: CapacitorConfig = {
     androidScheme: 'https',
     cleartext: true,
     // Pour le dev local - l'app iOS rechargera depuis votre serveur Next.js
-    url: 'http://localhost:3002',
-    allowNavigation: ['http://localhost:3002', '*.google.com', '*.googleapis.com']
+    // Utilisez l'IP réseau au lieu de localhost pour que le simulateur iOS puisse se connecter
+    url: 'http://192.168.1.22:3002',
+    allowNavigation: ['http://192.168.1.22:3002', 'http://localhost:3002', '*.google.com', '*.googleapis.com']
   }
 };
 

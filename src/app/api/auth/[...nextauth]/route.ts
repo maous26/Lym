@@ -2,7 +2,7 @@ import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import EmailProvider from "next-auth/providers/email";
 
-export const { handlers: GET, POST } = NextAuth({
+const handler = NextAuth({
   session: {
     strategy: "jwt",
   },
@@ -44,6 +44,9 @@ export const { handlers: GET, POST } = NextAuth({
       return token;
     },
     async redirect({ url, baseUrl }: any) {
+      // Allow redirects to the network IP address
+      const networkUrl = process.env.NEXTAUTH_URL || baseUrl;
+      if (url.startsWith(networkUrl)) return url;
       if (url.startsWith(baseUrl)) return url;
       if (url.startsWith("/")) return `${baseUrl}${url}`;
       return baseUrl;
@@ -55,3 +58,5 @@ export const { handlers: GET, POST } = NextAuth({
     },
   },
 });
+
+export { handler as GET, handler as POST };

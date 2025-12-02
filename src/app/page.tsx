@@ -33,6 +33,18 @@ export default function Home() {
     }
   }, [_hasHydrated, hasSoloProfile, hasFamilyProfile, isRedirecting, router]);
 
+  // Prevent rendering if we need to redirect (to avoid Prisma errors)
+  if (_hasHydrated && !hasSoloProfile() && !hasFamilyProfile()) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 via-white to-secondary-50">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-8 h-8 animate-spin text-primary-600" />
+          <p className="text-gray-600">Redirection vers la connexion...</p>
+        </div>
+      </div>
+    );
+  }
+
   // Show loading while store is hydrating
   if (!_hasHydrated) {
     return (
