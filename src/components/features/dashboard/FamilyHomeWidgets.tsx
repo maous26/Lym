@@ -1,6 +1,6 @@
 'use client';
 
-import { useFamilyStore } from '@/store/family-store';
+import { useUserStore } from '@/store/user-store';
 import { Users, Calendar, ShoppingCart, ChefHat, TrendingUp, Heart, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -20,7 +20,7 @@ function getAge(birthDate: Date | string): number {
 
 // Widget: Résumé Famille
 export function FamilySummaryWidget() {
-    const { family, members } = useFamilyStore();
+    const { family, members } = useUserStore();
     const router = useRouter();
 
     if (!family || members.length === 0) return null;
@@ -75,7 +75,7 @@ export function FamilySummaryWidget() {
 
 // Widget: Plan de Repas Actuel
 export function FamilyMealPlanWidget() {
-    const { activeMealPlan } = useFamilyStore();
+    const activeMealPlan = null; // TODO: Implémenter activeMealPlan dans user-store
     const router = useRouter();
 
     return (
@@ -126,7 +126,7 @@ export function FamilyMealPlanWidget() {
 
 // Widget: Liste de Courses
 export function FamilyShoppingWidget() {
-    const { family } = useFamilyStore();
+    const { family } = useUserStore();
     const router = useRouter();
 
     return (
@@ -173,7 +173,7 @@ export function FamilyShoppingWidget() {
 
 // Widget: Suggestions du Coach IA
 export function FamilyCoachWidget() {
-    const { members } = useFamilyStore();
+    const { members } = useUserStore();
 
     // Génération de suggestions basiques pour la démo
     const suggestions = [
@@ -249,7 +249,7 @@ export function FamilyCoachWidget() {
 
 // Widget: Alertes Nutrition
 export function FamilyNutritionAlertsWidget() {
-    const { members } = useFamilyStore();
+    const { members } = useUserStore();
 
     const alerts = [];
 

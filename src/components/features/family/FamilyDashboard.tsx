@@ -1,14 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useFamilyStore } from '@/store/family-store';
+import { useUserStore } from '@/store/user-store';
 import { Users, TrendingUp, TrendingDown, AlertTriangle, Trophy, Heart, Calendar, DollarSign, Award } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { getAge } from '@/types/family';
 
 export function FamilyDashboard() {
-    const { family, members, activeMealPlan } = useFamilyStore();
+    const { family, members } = useUserStore();
+    const activeMealPlan = null; // TODO: Implémenter dans user-store
     const [healthScore, setHealthScore] = useState(0);
 
     useEffect(() => {

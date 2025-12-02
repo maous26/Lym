@@ -1,14 +1,14 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useFamilyStore, useIsFamilyMode, useActiveFamily, useFamilyMembers } from '@/store/family-store';
+import { useUserStore, useIsFamilyMode, useFamily, useFamilyMembers } from '@/store/user-store';
 import { Users, ArrowRight, Plus, Crown, Heart, Star } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export function FamilyModeWidget() {
     const router = useRouter();
     const isFamilyMode = useIsFamilyMode();
-    const family = useActiveFamily();
+    const family = useFamily();
     const members = useFamilyMembers();
 
     // Si mode famille est actif
@@ -84,7 +84,7 @@ export function FamilyModeWidget() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-3xl p-6 border-2 border-purple-100 hover:border-purple-300 transition-all cursor-pointer group"
-            onClick={() => router.push('/onboarding?step=family')}
+            onClick={() => router.push('/onboarding/family')}
         >
             <div className="flex items-start gap-4 mb-4">
                 <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
