@@ -99,6 +99,7 @@ async function generateMemberInsights(member: any, mealLogs: any[]): Promise<Fam
         const avgCalcium = mealLogs.reduce((sum, log) => sum + (log.calcium || 0), 0) / (mealLogs.length || 1);
         if (avgCalcium < 700) {
             insights.push({
+                id: `notification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
                 familyId: '',
                 memberId: member.id,
                 type: 'alert',
@@ -117,6 +118,7 @@ async function generateMemberInsights(member: any, mealLogs: any[]): Promise<Fam
         // Légumes
         if (mealLogs.filter(log => log.comment?.includes('légumes')).length < 2) {
             insights.push({
+                id: `notification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
                 familyId: '',
                 memberId: member.id,
                 type: 'tip',
@@ -137,6 +139,7 @@ async function generateMemberInsights(member: any, mealLogs: any[]): Promise<Fam
             const avgIron = mealLogs.reduce((sum, log) => sum + (log.iron || 0), 0) / (mealLogs.length || 1);
             if (avgIron < 14) {
                 insights.push({
+                    id: `notification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
                     familyId: '',
                     memberId: member.id,
                     type: 'alert',
@@ -154,6 +157,7 @@ async function generateMemberInsights(member: any, mealLogs: any[]): Promise<Fam
         // Protéines pour croissance
         if (avgProteins < (member.targetProteins || 60) * 0.8) {
             insights.push({
+                id: `notification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
                 familyId: '',
                 memberId: member.id,
                 type: 'tip',
@@ -174,6 +178,7 @@ async function generateMemberInsights(member: any, mealLogs: any[]): Promise<Fam
             const calorieDeficit = (member.targetCalories || 2000) - avgCalories;
             if (calorieDeficit < -200) {
                 insights.push({
+                    id: `notification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
                     familyId: '',
                     memberId: member.id,
                     type: 'alert',
@@ -194,6 +199,7 @@ async function generateMemberInsights(member: any, mealLogs: any[]): Promise<Fam
         const proteinPerKg = avgProteins / (member.weight || 70);
         if (proteinPerKg < 1.0) {
             insights.push({
+                id: `notification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
                 familyId: '',
                 memberId: member.id,
                 type: 'alert',
@@ -211,6 +217,7 @@ async function generateMemberInsights(member: any, mealLogs: any[]): Promise<Fam
 
         // Hydratation
         insights.push({
+            id: `notification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             familyId: '',
             memberId: member.id,
             type: 'reminder',
