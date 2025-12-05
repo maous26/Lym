@@ -1,0 +1,671 @@
+// Schema Prisma pour LYM - Application de nutrition et planification de repas
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== AUTHENTIFICATION (NextAuth) ====================
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ==================== UTILISATEUR ====================
+
+model User {
+  id                  String           @id @default(cuid())
+  email               String           @unique
+  name                String?
+  image               String?
+  emailVerified       DateTime?
+  subscriptionPlan    SubscriptionPlan @default(BASIC)
+  subscriptionEndDate DateTime?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  // Relations Auth
+  accounts Account[]
+  sessions Session[]
+
+  // Relations Profil & Data
+  profile            UserProfile?
+  mealLogs           MealLog[]
+  weightLogs         WeightLog[]
+  recipes            Recipe[]
+  favorites          Favorite[]
+  ratings            Rating[]
+  coachConversations CoachConversation[]
+  mealPlans          MealPlan[]
+  shoppingLists      ShoppingList[]
+
+  // Famille
+  ownedFamilies     Family[]       @relation("FamilyOwner")
+  familyMemberships FamilyMember[]
+
+  // Gamification
+  ranking UserRanking?
+}
+
+enum SubscriptionPlan {
+  BASIC
+  PREMIUM
+  FAMILY
+}
+
+// ==================== PROFIL UTILISATEUR ====================
+
+model UserProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Infos de base
+  birthDate     DateTime?
+  gender        Gender?
+  height        Float? // en cm
+  currentWeight Float? // en kg
+  targetWeight  Float?
+
+  // Objectifs
+  goal          NutritionGoal @default(MAINTAIN)
+  activityLevel ActivityLevel @default(MODERATE)
+
+  // Préférences alimentaires
+  dietType  DietType @default(OMNIVORE)
+  allergies String[] // ["gluten", "lactose", ...]
+  dislikes  String[] // Aliments non aimés
+
+  // Capacités culinaires
+  cookingSkill CookingSkill @default(INTERMEDIATE)
+  cookingTime  CookingTime  @default(MEDIUM)
+
+  // Besoins calculés (via formule Mifflin-St Jeor)
+  dailyCalories Int?
+  proteinTarget Int? // grammes
+  carbsTarget   Int? // grammes
+  fatTarget     Int? // grammes
+
+  // Onboarding
+  onboardingCompleted Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum NutritionGoal {
+  LOSE_WEIGHT
+  GAIN_MUSCLE
+  MAINTAIN
+}
+
+enum ActivityLevel {
+  SEDENTARY
+  LIGHT
+  MODERATE
+  ACTIVE
+  VERY_ACTIVE
+}
+
+enum DietType {
+  OMNIVORE
+  VEGETARIAN
+  VEGAN
+  PESCATARIAN
+  KETO
+  PALEO
+  HALAL
+  KOSHER
+}
+
+enum CookingSkill {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum CookingTime {
+  QUICK // < 20 min
+  MEDIUM // 20-45 min
+  ELABORATE // > 45 min
+}
+
+// ==================== REPAS & JOURNAL ====================
+
+model MealLog {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  date     DateTime @default(now())
+  mealType MealType
+
+  name        String
+  description String?
+  imageUrl    String?
+
+  // Macronutriments
+  calories Int
+  protein  Float
+  carbs    Float
+  fat      Float
+  fiber    Float?
+
+  // Source
+  recipeId      String?
+  recipe        Recipe? @relation(fields: [recipeId], references: [id])
+  isAIGenerated Boolean @default(false)
+
+  // Famille (si repas familial)
+  familyMemberId String?
+  familyMember   FamilyMember? @relation(fields: [familyMemberId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, date])
+}
+
+enum MealType {
+  BREAKFAST
+  LUNCH
+  DINNER
+  SNACK
+}
+
+// ==================== RECETTES ====================
+
+model Recipe {
+  id       String @id @default(cuid())
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String?
+  imageUrl    String?
+
+  // Détails
+  prepTime   Int        // minutes
+  cookTime   Int        // minutes
+  servings   Int
+  difficulty Difficulty @default(MEDIUM)
+
+  // Ingrédients (JSON: [{name, quantity, unit}])
+  ingredients  Json
+  instructions String[] // Étapes de préparation
+
+  // Nutrition par portion
+  calories Int
+  protein  Float
+  carbs    Float
+  fat      Float
+  fiber    Float?
+
+  // Métadata
+  tags          String[] // ["rapide", "végétarien", ...]
+  cuisine       String? // "française", "italienne"...
+  isPublic      Boolean  @default(false)
+  isAIGenerated Boolean  @default(false)
+
+  // Stats
+  viewCount Int @default(0)
+
+  // Relations
+  mealLogs  MealLog[]
+  favorites Favorite[]
+  ratings   Rating[]
+  mealItems MealPlanItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([authorId])
+  @@index([isPublic])
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+// ==================== PLANS DE REPAS ====================
+
+model MealPlan {
+  id       String  @id @default(cuid())
+  userId   String?
+  user     User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  familyId String?
+  family   Family? @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  name      String
+  startDate DateTime
+  endDate   DateTime
+
+  // Type de plan
+  planType MealPlanType @default(INDIVIDUAL)
+
+  // Budget estimé
+  estimatedCost Float?
+
+  isAIGenerated Boolean @default(true)
+
+  // Relations
+  items        MealPlanItem[]
+  shoppingList ShoppingList?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([familyId])
+}
+
+enum MealPlanType {
+  INDIVIDUAL
+  FAMILY_UNIFIED
+  FAMILY_HYBRID
+}
+
+model MealPlanItem {
+  id         String   @id @default(cuid())
+  mealPlanId String
+  mealPlan   MealPlan @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
+
+  day      Int // 1-7
+  mealType MealType
+
+  // Recette associée
+  recipeId String?
+  recipe   Recipe? @relation(fields: [recipeId], references: [id])
+
+  // Ou repas personnalisé
+  customMealName String?
+  customCalories Int?
+  customProtein  Float?
+  customCarbs    Float?
+  customFat      Float?
+
+  // Pour les plans famille
+  targetMemberId String? // null = tout le monde
+  servings       Int     @default(1)
+
+  notes String?
+
+  @@index([mealPlanId])
+}
+
+// ==================== LISTE DE COURSES ====================
+
+model ShoppingList {
+  id         String    @id @default(cuid())
+  mealPlanId String?   @unique
+  mealPlan   MealPlan? @relation(fields: [mealPlanId], references: [id])
+
+  userId   String?
+  user     User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  familyId String?
+  family   Family? @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  name String @default("Ma liste")
+
+  // Items
+  items ShoppingItem[]
+
+  estimatedTotal Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([familyId])
+}
+
+model ShoppingItem {
+  id             String       @id @default(cuid())
+  shoppingListId String
+  shoppingList   ShoppingList @relation(fields: [shoppingListId], references: [id], onDelete: Cascade)
+
+  ingredient String
+  quantity   Float
+  unit       String
+  category   ShoppingCategory @default(OTHER)
+
+  estimatedPrice Float?
+  isChecked      Boolean @default(false)
+
+  // Pour liste collaborative famille
+  assignedToId String? // FamilyMember id
+
+  @@index([shoppingListId])
+}
+
+enum ShoppingCategory {
+  FRUITS_VEGETABLES
+  MEAT_FISH
+  DAIRY
+  BAKERY
+  CEREALS_PASTA
+  CANNED_GOODS
+  FROZEN
+  BEVERAGES
+  CONDIMENTS
+  SNACKS
+  OTHER
+}
+
+// ==================== FAMILLE ====================
+
+model Family {
+  id      String @id @default(cuid())
+  name    String
+  ownerId String
+  owner   User   @relation("FamilyOwner", fields: [ownerId], references: [id])
+
+  inviteCode String @unique @default(cuid())
+  maxMembers Int    @default(6)
+
+  // Relations
+  members       FamilyMember[]
+  mealPlans     MealPlan[]
+  shoppingLists ShoppingList[]
+  challenges    FamilyChallenge[]
+  notifications FamilyNotification[]
+  invitations   FamilyInvitation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model FamilyMember {
+  id       String  @id @default(cuid())
+  familyId String
+  family   Family  @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  // Lien utilisateur (optionnel - peut être un membre sans compte)
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id])
+
+  // Profil membre
+  name     String
+  avatar   String?
+  role     FamilyRole @default(MEMBER)
+  ageGroup AgeGroup   @default(ADULT)
+
+  // Profil nutritionnel
+  birthDate DateTime?
+  gender    Gender?
+  height    Float?
+  weight    Float?
+
+  allergies    String[]
+  dietaryNeeds String[]
+  dislikes     String[]
+
+  // Besoins calculés
+  dailyCalories Int?
+  proteinTarget Int?
+  carbsTarget   Int?
+  fatTarget     Int?
+
+  isActive Boolean @default(true)
+  joinedAt DateTime @default(now())
+
+  // Relations
+  mealLogs          MealLog[]
+  challengeProgress ChallengeProgress[]
+
+  @@index([familyId])
+  @@index([userId])
+}
+
+enum FamilyRole {
+  ADMIN
+  PARENT
+  MEMBER
+  CHILD
+}
+
+enum AgeGroup {
+  INFANT // 0-2 ans
+  CHILD // 3-12 ans
+  TEEN // 13-17 ans
+  ADULT // 18-64 ans
+  SENIOR // 65+ ans
+}
+
+model FamilyInvitation {
+  id       String @id @default(cuid())
+  familyId String
+  family   Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  email     String
+  token     String   @unique @default(cuid())
+  role      FamilyRole @default(MEMBER)
+  expiresAt DateTime
+
+  acceptedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([familyId])
+  @@index([email])
+}
+
+model FamilyChallenge {
+  id       String @id @default(cuid())
+  familyId String
+  family   Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String?
+  type        ChallengeType
+  target      Int // Objectif numérique
+  unit        String? // "pas", "fruits", "recettes"...
+
+  startDate DateTime
+  endDate   DateTime
+
+  rewards Json? // {points, badge}
+
+  // Progression
+  progress ChallengeProgress[]
+
+  createdAt DateTime @default(now())
+
+  @@index([familyId])
+}
+
+enum ChallengeType {
+  NUTRITION
+  ACTIVITY
+  BUDGET
+  ECOLOGY
+}
+
+model ChallengeProgress {
+  id          String          @id @default(cuid())
+  challengeId String
+  challenge   FamilyChallenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+
+  memberId String
+  member   FamilyMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  currentValue Int       @default(0)
+  updatedAt    DateTime  @updatedAt
+
+  @@unique([challengeId, memberId])
+}
+
+model FamilyNotification {
+  id       String @id @default(cuid())
+  familyId String
+  family   Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  targetMemberId String? // null = toute la famille
+
+  title    String
+  message  String
+  type     NotificationType
+  priority Priority         @default(NORMAL)
+
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([familyId])
+}
+
+enum NotificationType {
+  ALERT
+  REMINDER
+  INFO
+  ACHIEVEMENT
+}
+
+enum Priority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+// ==================== POIDS & SANTÉ ====================
+
+model WeightLog {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  date   DateTime @default(now())
+  weight Float // kg
+
+  // Composition corporelle (optionnel)
+  bodyFat      Float?
+  muscleMass   Float?
+  waterPercent Float?
+
+  source String @default("manual") // manual, apple_health, google_fit...
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, date])
+}
+
+// ==================== COACH IA ====================
+
+model CoachConversation {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Messages: [{role: "user"|"assistant", content: string, timestamp: Date}]
+  messages Json
+
+  // Contexte de la conversation
+  topic String? // "meal_planning", "nutrition_advice", "weight_loss"...
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// ==================== GAMIFICATION ====================
+
+model UserRanking {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  level  Int @default(1)
+  points Int @default(0)
+
+  // Badges gagnés
+  badges String[] // ["first_recipe", "week_streak", "family_chef"...]
+
+  // Statistiques
+  recipesCreated  Int @default(0)
+  recipesShared   Int @default(0)
+  mealsLogged     Int @default(0)
+  streakDays      Int @default(0)
+  maxStreakDays   Int @default(0)
+  ratingsReceived Int @default(0)
+  avgRating       Float?
+
+  updatedAt DateTime @updatedAt
+}
+
+// ==================== INTERACTIONS ====================
+
+model Rating {
+  id       String @id @default(cuid())
+  userId   String
+  recipeId String
+  recipe   Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  score   Int // 1-5
+  comment String?
+
+  // Détails
+  tasteRating      Int? // 1-5
+  difficultyRating Int? // 1-5
+  tags             String[] // ["trop_salé", "parfait", ...]
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, recipeId])
+  @@index([recipeId])
+}
+
+model Favorite {
+  id       String @id @default(cuid())
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipeId String
+  recipe   Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, recipeId])
+  @@index([userId])
+}
