@@ -6,12 +6,10 @@ const config: CapacitorConfig = {
   webDir: 'out',
   server: {
     androidScheme: 'https',
-    cleartext: true,
-    // Pour iOS testing, on utilise l'IP locale
-    url: 'http://192.168.1.22:3000',
-    allowNavigation: ['http://192.168.1.22:3000', '*.google.com', '*.googleapis.com', 'http://localhost:3000'],
-    iosScheme: 'capacitor',
-    hostname: '192.168.1.22'
+    // Production Railway URL
+    url: 'https://lym-production.up.railway.app',
+    allowNavigation: ['https://lym-production.up.railway.app', '*.google.com', '*.googleapis.com'],
+    iosScheme: 'https',
   },
 };
 
