@@ -8,8 +8,8 @@ const config: CapacitorConfig = {
     androidScheme: 'https',
     cleartext: true,
     // Pour iOS testing, on utilise l'IP locale
-    url: 'http://192.168.1.22:3002',
-    allowNavigation: ['http://192.168.1.22:3002', '*.google.com', '*.googleapis.com'],
+    url: 'http://192.168.1.22:3000',
+    allowNavigation: ['http://192.168.1.22:3000', '*.google.com', '*.googleapis.com', 'http://localhost:3000'],
     iosScheme: 'capacitor',
     hostname: '192.168.1.22'
   },

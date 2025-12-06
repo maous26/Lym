@@ -2,14 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { signIn, useSession } from 'next-auth/react';
-import { MarketingCarousel } from '@/components/features/auth/MarketingCarousel';
-import { Chrome, Loader2 } from 'lucide-react';
+import { Chrome, Loader2, Utensils, Heart, TrendingUp, Users } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
     const [isLoading, setIsLoading] = useState(false);
-    const [step, setStep] = useState<'carousel' | 'auth'>('carousel');
     const [error, setError] = useState<string | null>(null);
     const router = useRouter();
     const { status } = useSession();
