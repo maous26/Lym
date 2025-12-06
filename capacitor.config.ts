@@ -8,8 +8,15 @@ const config: CapacitorConfig = {
     androidScheme: 'https',
     // Production Railway URL
     url: 'https://lym-production.up.railway.app',
-    allowNavigation: ['https://lym-production.up.railway.app', '*.google.com', '*.googleapis.com'],
+    allowNavigation: ['https://lym-production.up.railway.app', '*.google.com', '*.googleapis.com', '*.gstatic.com', 'accounts.google.com'],
     iosScheme: 'https',
+  },
+  plugins: {
+    Browser: {
+      windowName: '_blank',
+      toolbarColor: '#ffffff',
+      presentationStyle: 'fullscreen',
+    },
   },
 };
 
