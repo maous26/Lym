@@ -7,12 +7,39 @@ import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { Browser } from '@capacitor/browser';
 import { Capacitor } from '@capacitor/core';
+import { App } from '@capacitor/app';
 
 export default function LoginPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const router = useRouter();
-    const { status } = useSession();
+    const { status, update } = useSession();
+
+    // Écouter les URL callbacks depuis Safari (OAuth)
+    useEffect(() => {
+        if (!Capacitor.isNativePlatform()) return;
+
+        const handleAppUrlOpen = async (event: any) => {
+            console.log('App URL opened:', event.url);
+            
+            // Fermer le navigateur
+            await Browser.close();
+            
+            // Forcer la mise à jour de la session
+            await update();
+            
+            // Vérifier si on doit rediriger
+            if (event.url.includes('/auth/plan-selection') || event.url.includes('callback')) {
+                router.push('/auth/plan-selection');
+            }
+        };
+
+        const listener = App.addListener('appUrlOpen', handleAppUrlOpen);
+
+        return () => {
+            listener.remove();
+        };
+    }, [router, update]);
 
     // Rediriger si déjà connecté
     useEffect(() => {
@@ -30,8 +57,11 @@ export default function LoginPage() {
             if (Capacitor.isNativePlatform()) {
                 const baseUrl = window.location.origin;
                 const authUrl = `${baseUrl}/api/auth/signin/google?callbackUrl=${encodeURIComponent('/auth/plan-selection')}`;
+                
+                console.log('Opening browser with URL:', authUrl);
                 await Browser.open({ url: authUrl });
-                setIsLoading(false);
+                
+                // Ne pas désactiver le loading ici, on attend le callback
                 return;
             }
 
@@ -50,7 +80,6 @@ export default function LoginPage() {
         } catch (error) {
             console.error('Google sign in error:', error);
             setError('Une erreur inattendue s\'est produite.');
-        } finally {
             setIsLoading(false);
         }
     };
