@@ -20,17 +20,30 @@ export default function LoginPage() {
         if (!Capacitor.isNativePlatform()) return;
 
         const handleAppUrlOpen = async (event: any) => {
-            console.log('App URL opened:', event.url);
+            console.log('[OAuth Callback] App URL opened:', event.url);
             
-            // Fermer le navigateur
-            await Browser.close();
-            
-            // Forcer la mise à jour de la session
-            await update();
-            
-            // Vérifier si on doit rediriger
-            if (event.url.includes('/auth/plan-selection') || event.url.includes('callback')) {
+            try {
+                // Fermer le navigateur
+                await Browser.close();
+                console.log('[OAuth Callback] Browser closed');
+                
+                // Attendre un peu pour que la session soit bien sauvegardée côté serveur
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                // Forcer la mise à jour de la session
+                console.log('[OAuth Callback] Updating session...');
+                const updatedSession = await update();
+                console.log('[OAuth Callback] Session updated:', updatedSession);
+                
+                // Désactiver le loading
+                setIsLoading(false);
+                
+                // Rediriger vers plan-selection
+                console.log('[OAuth Callback] Redirecting to plan-selection');
                 router.push('/auth/plan-selection');
+            } catch (error) {
+                console.error('[OAuth Callback] Error:', error);
+                setIsLoading(false);
             }
         };
 
@@ -46,12 +59,14 @@ export default function LoginPage() {
         };
     }, [router, update]);
 
-    // Rediriger si déjà connecté
+    // Rediriger si déjà connecté (mais pas pendant le processus de callback)
     useEffect(() => {
-        if (status === 'authenticated') {
+        console.log('[Login Page] Session status:', status);
+        if (status === 'authenticated' && !isLoading) {
+            console.log('[Login Page] Already authenticated, redirecting...');
             router.push('/auth/plan-selection');
         }
-    }, [status, router]);
+    }, [status, router, isLoading]);
 
     const handleGoogleSignIn = async () => {
         setIsLoading(true);
