@@ -53,39 +53,77 @@ export default function LoginPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center py-12 px-4">
-            <div className="w-full max-w-5xl">
-                {step === 'carousel' ? (
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="space-y-8"
-                    >
-                        <div className="text-center">
-                            <h1 className="text-4xl font-bold text-gray-900 mb-2">LYM</h1>
-                            <p className="text-xl text-gray-600">Votre Coach Nutritionnel Personnel</p>
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50 flex items-center justify-center py-12 px-4">
+            <div className="w-full max-w-6xl">
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="grid md:grid-cols-2 gap-12 items-center"
+                >
+                    {/* Section gauche - Marketing */}
+                    <div className="space-y-8">
+                        <div>
+                            <h1 className="text-5xl font-bold text-gray-900 mb-4">
+                                LYM
+                            </h1>
+                            <p className="text-2xl text-gray-700 mb-6">
+                                Votre Coach Nutritionnel Personnel Intelligent
+                            </p>
+                            <p className="text-lg text-gray-600">
+                                Transformez votre alimentation avec l'IA, atteignez vos objectifs santé
+                            </p>
                         </div>
 
-                        <MarketingCarousel />
-
-                        <div className="flex justify-center">
-                            <button
-                                onClick={() => setStep('auth')}
-                                className="px-8 py-3 bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-bold rounded-xl hover:shadow-lg transition-all hover:scale-105"
-                            >
-                                Commencer →
-                            </button>
+                        {/* Features */}
+                        <div className="space-y-4">
+                            <div className="flex items-start gap-4">
+                                <div className="bg-blue-100 p-3 rounded-xl">
+                                    <Utensils className="w-6 h-6 text-blue-600" />
+                                </div>
+                                <div>
+                                    <h3 className="font-semibold text-gray-900">Plans Personnalisés</h3>
+                                    <p className="text-gray-600 text-sm">Repas adaptés à vos besoins et préférences</p>
+                                </div>
+                            </div>
+                            <div className="flex items-start gap-4">
+                                <div className="bg-green-100 p-3 rounded-xl">
+                                    <TrendingUp className="w-6 h-6 text-green-600" />
+                                </div>
+                                <div>
+                                    <h3 className="font-semibold text-gray-900">Suivi en Temps Réel</h3>
+                                    <p className="text-gray-600 text-sm">Analysez vos progrès et ajustez votre parcours</p>
+                                </div>
+                            </div>
+                            <div className="flex items-start gap-4">
+                                <div className="bg-purple-100 p-3 rounded-xl">
+                                    <Users className="w-6 h-6 text-purple-600" />
+                                </div>
+                                <div>
+                                    <h3 className="font-semibold text-gray-900">Mode Famille</h3>
+                                    <p className="text-gray-600 text-sm">Gérez la nutrition de toute la famille</p>
+                                </div>
+                            </div>
+                            <div className="flex items-start gap-4">
+                                <div className="bg-pink-100 p-3 rounded-xl">
+                                    <Heart className="w-6 h-6 text-pink-600" />
+                                </div>
+                                <div>
+                                    <h3 className="font-semibold text-gray-900">Coach IA</h3>
+                                    <p className="text-gray-600 text-sm">Assistant intelligent disponible 24/7</p>
+                                </div>
+                            </div>
                         </div>
-                    </motion.div>
-                ) : (
+                    </div>
+
+                    {/* Section droite - Authentification */}
                     <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="max-w-md mx-auto"
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.2 }}
                     >
                         <div className="bg-white rounded-3xl shadow-2xl p-8 space-y-6">
                             <div className="text-center">
-                                <h2 className="text-3xl font-bold text-gray-900 mb-2">Se Connecter</h2>
+                                <h2 className="text-3xl font-bold text-gray-900 mb-2">Commencer</h2>
                                 <p className="text-gray-600">Connectez-vous pour accéder à LYM</p>
                             </div>
 
@@ -100,7 +138,7 @@ export default function LoginPage() {
                             <button
                                 onClick={handleGoogleSignIn}
                                 disabled={isLoading}
-                                className="w-full py-4 px-4 rounded-xl bg-white border-2 border-gray-200 hover:border-blue-500 hover:bg-blue-50 transition-all flex items-center justify-center gap-3 font-semibold text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-full py-4 px-4 rounded-xl bg-white border-2 border-gray-200 hover:border-blue-500 hover:bg-blue-50 transition-all flex items-center justify-center gap-3 font-semibold text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
                             >
                                 {isLoading ? (
                                     <>
@@ -116,7 +154,7 @@ export default function LoginPage() {
                             </button>
 
                             {/* Informations */}
-                            <p className="text-center text-sm text-gray-500">
+                            <p className="text-center text-xs text-gray-500">
                                 En vous connectant, vous acceptez nos{' '}
                                 <a href="#" className="text-blue-600 hover:underline">
                                     conditions d'utilisation
@@ -126,16 +164,9 @@ export default function LoginPage() {
                                     politique de confidentialité
                                 </a>
                             </p>
-
-                            <button
-                                onClick={() => setStep('carousel')}
-                                className="w-full py-2 text-gray-600 hover:text-gray-900 font-semibold transition-colors"
-                            >
-                                ← Retour
-                            </button>
                         </div>
                     </motion.div>
-                )}
+                </motion.div>
             </div>
         </div>
     );
