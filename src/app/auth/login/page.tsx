@@ -12,6 +12,7 @@ import { App } from '@capacitor/app';
 export default function LoginPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [isCallbackProcessing, setIsCallbackProcessing] = useState(false);
     const router = useRouter();
     const { status, update } = useSession();
 
@@ -23,27 +24,30 @@ export default function LoginPage() {
             console.log('[OAuth Callback] App URL opened:', event.url);
             
             try {
+                setIsCallbackProcessing(true);
+                
                 // Fermer le navigateur
                 await Browser.close();
                 console.log('[OAuth Callback] Browser closed');
                 
-                // Attendre un peu pour que la session soit bien sauvegardée côté serveur
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                // Attendre que la session soit bien sauvegardée côté serveur
+                await new Promise(resolve => setTimeout(resolve, 2000));
                 
-                // Forcer la mise à jour de la session
+                // Forcer la mise à jour de la session plusieurs fois
                 console.log('[OAuth Callback] Updating session...');
-                const updatedSession = await update();
-                console.log('[OAuth Callback] Session updated:', updatedSession);
+                for (let i = 0; i < 3; i++) {
+                    await update();
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+                console.log('[OAuth Callback] Session update complete');
                 
-                // Désactiver le loading
+                // Laisser le useEffect ci-dessous gérer la redirection
                 setIsLoading(false);
-                
-                // Rediriger vers plan-selection
-                console.log('[OAuth Callback] Redirecting to plan-selection');
-                router.push('/auth/plan-selection');
+                setIsCallbackProcessing(false);
             } catch (error) {
                 console.error('[OAuth Callback] Error:', error);
                 setIsLoading(false);
+                setIsCallbackProcessing(false);
             }
         };
 
@@ -59,14 +63,14 @@ export default function LoginPage() {
         };
     }, [router, update]);
 
-    // Rediriger si déjà connecté (mais pas pendant le processus de callback)
+    // Rediriger si déjà connecté (mais pas pendant le traitement du callback)
     useEffect(() => {
-        console.log('[Login Page] Session status:', status);
-        if (status === 'authenticated' && !isLoading) {
-            console.log('[Login Page] Already authenticated, redirecting...');
+        console.log('[Login Page] Session status:', status, 'Callback processing:', isCallbackProcessing);
+        if (status === 'authenticated' && !isCallbackProcessing) {
+            console.log('[Login Page] Authenticated, redirecting to plan-selection');
             router.push('/auth/plan-selection');
         }
-    }, [status, router, isLoading]);
+    }, [status, router, isCallbackProcessing]);
 
     const handleGoogleSignIn = async () => {
         setIsLoading(true);

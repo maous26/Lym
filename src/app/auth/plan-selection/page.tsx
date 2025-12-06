@@ -67,24 +67,18 @@ export default function PlanSelectionPage() {
     const { setSubscriptionPlan, setActiveMode, setUserId } = useUserStore();
     const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
-    const [checkCount, setCheckCount] = useState(0);
 
-    // Rediriger vers login si pas de session (mais donner du temps pour l'OAuth callback)
+    // Rediriger vers login si pas de session
     useEffect(() => {
-        console.log('[Plan Selection] Session status:', status, 'Check count:', checkCount);
+        console.log('[Plan Selection] Session status:', status);
         
         if (status === 'unauthenticated') {
-            // Attendre quelques vérifications avant de rediriger (pour OAuth callback)
-            if (checkCount < 3) {
-                setCheckCount(prev => prev + 1);
-                return;
-            }
-            console.log('[Plan Selection] Unauthenticated after 3 checks, redirecting to login');
+            console.log('[Plan Selection] Unauthenticated, redirecting to login');
             router.push('/auth/login');
         } else if (status === 'authenticated') {
             console.log('[Plan Selection] Authenticated:', session?.user?.email);
         }
-    }, [status, router, checkCount, session]);
+    }, [status, router, session]);
 
     // Synchroniser l'ID utilisateur avec le store
     useEffect(() => {

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { useUserStore } from '@/store/user-store';
 import { PersonalizedMessage } from '@/components/features/dashboard/PersonalizedMessage';
 import { WeeklyOverview } from '@/components/features/dashboard/WeeklyOverview';
@@ -22,16 +23,23 @@ import { Loader2 } from 'lucide-react';
 
 export default function Home() {
   const { activeMode, _hasHydrated, hasSoloProfile, hasFamilyProfile } = useUserStore();
+  const { status } = useSession();
   const router = useRouter();
   const [isRedirecting, setIsRedirecting] = useState(false);
 
   useEffect(() => {
-    // Si pas de profil du tout, rediriger vers l'authentification
-    if (_hasHydrated && !hasSoloProfile() && !hasFamilyProfile() && !isRedirecting) {
-      setIsRedirecting(true);
-      router.push('/auth/login');
+    // Si pas authentifié ET pas de profil local, rediriger vers landing
+    if (_hasHydrated && status !== 'loading' && !isRedirecting) {
+      if (status === 'unauthenticated' && !hasSoloProfile() && !hasFamilyProfile()) {
+        setIsRedirecting(true);
+        router.push('/landing');
+      } else if (status === 'unauthenticated') {
+        // A un profil local mais pas authentifié - aller au login
+        setIsRedirecting(true);
+        router.push('/auth/login');
+      }
     }
-  }, [_hasHydrated, hasSoloProfile, hasFamilyProfile, isRedirecting, router]);
+  }, [_hasHydrated, status, hasSoloProfile, hasFamilyProfile, isRedirecting, router]);
 
   // Prevent rendering if we need to redirect (to avoid Prisma errors)
   if (_hasHydrated && !hasSoloProfile() && !hasFamilyProfile()) {
