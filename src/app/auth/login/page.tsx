@@ -5,6 +5,8 @@ import { signIn, useSession } from 'next-auth/react';
 import { Chrome, Loader2, Utensils, Heart, TrendingUp, Users } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
+import { Browser } from '@capacitor/browser';
+import { Capacitor } from '@capacitor/core';
 
 export default function LoginPage() {
     const [isLoading, setIsLoading] = useState(false);
@@ -24,6 +26,16 @@ export default function LoginPage() {
         setError(null);
         
         try {
+            // Si on est sur mobile, ouvrir dans le navigateur système
+            if (Capacitor.isNativePlatform()) {
+                const baseUrl = window.location.origin;
+                const authUrl = `${baseUrl}/api/auth/signin/google?callbackUrl=${encodeURIComponent('/auth/plan-selection')}`;
+                await Browser.open({ url: authUrl });
+                setIsLoading(false);
+                return;
+            }
+
+            // Sur web, utiliser la méthode classique
             const result = await signIn('google', {
                 redirect: false,
                 callbackUrl: '/auth/plan-selection',
