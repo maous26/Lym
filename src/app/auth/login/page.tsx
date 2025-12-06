@@ -34,10 +34,15 @@ export default function LoginPage() {
             }
         };
 
-        const listener = App.addListener('appUrlOpen', handleAppUrlOpen);
+        let listenerHandle: any;
+        App.addListener('appUrlOpen', handleAppUrlOpen).then(handle => {
+            listenerHandle = handle;
+        });
 
         return () => {
-            listener.remove();
+            if (listenerHandle) {
+                listenerHandle.remove();
+            }
         };
     }, [router, update]);
 
