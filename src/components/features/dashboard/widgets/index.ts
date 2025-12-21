@@ -1,0 +1,11 @@
+export { WelcomeWidget } from './WelcomeWidget';
+export { NutritionRingWidget } from './NutritionRingWidget';
+export { TodayMealsWidget } from './TodayMealsWidget';
+export { QuickActionsWidget } from './QuickActionsWidget';
+export { CoachInsightWidget } from './CoachInsightWidget';
+export { WeekOverviewWidget } from './WeekOverviewWidget';
+export { WeightProgressWidget } from './WeightProgressWidget';
+export { RecipeSuggestionWidget } from './RecipeSuggestionWidget';
+export { HydrationWidget } from './HydrationWidget';
+export { AchievementsWidget } from './AchievementsWidget';
+export { StreakWidget } from './StreakWidget';

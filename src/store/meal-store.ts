@@ -1,0 +1,379 @@
+import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import type {
+  Meal,
+  MealType,
+  DailyMeals,
+  DailyNutrition,
+  NutritionInfo,
+  FoodItem,
+  MealItem,
+  MealPlan,
+} from '@/types/meal';
+
+// Get today's date in YYYY-MM-DD format
+const getTodayDate = () => new Date().toISOString().split('T')[0];
+
+interface MealState {
+  // Current date context
+  selectedDate: string;
+
+  // Meals data
+  meals: Record<string, DailyMeals>; // keyed by date
+  currentMealInProgress: Partial<Meal> | null;
+
+  // Daily nutrition
+  dailyNutrition: Record<string, DailyNutrition>; // keyed by date
+
+  // Active meal plan
+  activeMealPlan: MealPlan | null;
+
+  // Add meal flow
+  addMealType: MealType | null;
+  addMealItems: MealItem[];
+
+  // Loading states
+  isLoading: boolean;
+}
+
+interface MealActions {
+  // Date navigation
+  setSelectedDate: (date: string) => void;
+  goToToday: () => void;
+  goToPreviousDay: () => void;
+  goToNextDay: () => void;
+
+  // Meals CRUD
+  addMeal: (meal: Meal) => void;
+  updateMeal: (mealId: string, updates: Partial<Meal>) => void;
+  deleteMeal: (date: string, mealType: MealType) => void;
+
+  // Add meal flow
+  startAddMeal: (type: MealType) => void;
+  addItemToMeal: (item: MealItem) => void;
+  updateMealItem: (itemId: string, updates: Partial<MealItem>) => void;
+  removeItemFromMeal: (itemId: string) => void;
+  saveMealInProgress: () => void;
+  cancelAddMeal: () => void;
+
+  // Daily nutrition
+  calculateDailyNutrition: (date: string) => void;
+  setDailyNutrition: (date: string, nutrition: DailyNutrition) => void;
+
+  // Meal plan
+  setActiveMealPlan: (plan: MealPlan | null) => void;
+  markMealCompleted: (date: string, mealType: MealType) => void;
+
+  // Utils
+  getMealsForDate: (date: string) => DailyMeals | null;
+  getTodayNutrition: () => DailyNutrition | null;
+
+  // Reset
+  reset: () => void;
+}
+
+// Calculate total nutrition from items
+const calculateTotalNutrition = (items: MealItem[]): NutritionInfo => {
+  return items.reduce(
+    (total, item) => {
+      const multiplier = item.quantity;
+      return {
+        calories: total.calories + item.food.nutrition.calories * multiplier,
+        proteins: total.proteins + item.food.nutrition.proteins * multiplier,
+        carbs: total.carbs + item.food.nutrition.carbs * multiplier,
+        fats: total.fats + item.food.nutrition.fats * multiplier,
+        fiber: (total.fiber || 0) + (item.food.nutrition.fiber || 0) * multiplier,
+        sugar: (total.sugar || 0) + (item.food.nutrition.sugar || 0) * multiplier,
+        sodium: (total.sodium || 0) + (item.food.nutrition.sodium || 0) * multiplier,
+        saturatedFat:
+          (total.saturatedFat || 0) +
+          (item.food.nutrition.saturatedFat || 0) * multiplier,
+      };
+    },
+    {
+      calories: 0,
+      proteins: 0,
+      carbs: 0,
+      fats: 0,
+      fiber: 0,
+      sugar: 0,
+      sodium: 0,
+      saturatedFat: 0,
+    }
+  );
+};
+
+const initialState: MealState = {
+  selectedDate: getTodayDate(),
+  meals: {},
+  currentMealInProgress: null,
+  dailyNutrition: {},
+  activeMealPlan: null,
+  addMealType: null,
+  addMealItems: [],
+  isLoading: false,
+};
+
+export const useMealStore = create<MealState & MealActions>()(
+  persist(
+    (set, get) => ({
+      ...initialState,
+
+      // Date navigation
+      setSelectedDate: (date) => set({ selectedDate: date }),
+      goToToday: () => set({ selectedDate: getTodayDate() }),
+      goToPreviousDay: () => {
+        const current = new Date(get().selectedDate);
+        current.setDate(current.getDate() - 1);
+        set({ selectedDate: current.toISOString().split('T')[0] });
+      },
+      goToNextDay: () => {
+        const current = new Date(get().selectedDate);
+        current.setDate(current.getDate() + 1);
+        set({ selectedDate: current.toISOString().split('T')[0] });
+      },
+
+      // Meals CRUD
+      addMeal: (meal) =>
+        set((state) => {
+          const dateKey = meal.date;
+          const existing = state.meals[dateKey] || {
+            date: dateKey,
+            totalNutrition: { calories: 0, proteins: 0, carbs: 0, fats: 0 },
+            caloriesGoal: 2000,
+            proteinsGoal: 150,
+            carbsGoal: 250,
+            fatsGoal: 65,
+          };
+
+          const updated = {
+            ...existing,
+            [meal.type]: meal,
+          };
+
+          // Recalculate total nutrition
+          const allMeals = [
+            updated.breakfast,
+            updated.lunch,
+            updated.snack,
+            updated.dinner,
+          ].filter(Boolean) as Meal[];
+
+          updated.totalNutrition = allMeals.reduce(
+            (total, m) => ({
+              calories: total.calories + m.totalNutrition.calories,
+              proteins: total.proteins + m.totalNutrition.proteins,
+              carbs: total.carbs + m.totalNutrition.carbs,
+              fats: total.fats + m.totalNutrition.fats,
+            }),
+            { calories: 0, proteins: 0, carbs: 0, fats: 0 }
+          );
+
+          return {
+            meals: {
+              ...state.meals,
+              [dateKey]: updated,
+            },
+          };
+        }),
+
+      updateMeal: (mealId, updates) =>
+        set((state) => {
+          // Find the meal across all dates
+          const newMeals = { ...state.meals };
+          for (const [date, dailyMeals] of Object.entries(newMeals)) {
+            for (const type of ['breakfast', 'lunch', 'snack', 'dinner'] as MealType[]) {
+              const meal = dailyMeals[type];
+              if (meal && meal.id === mealId) {
+                newMeals[date] = {
+                  ...dailyMeals,
+                  [type]: { ...meal, ...updates },
+                };
+                return { meals: newMeals };
+              }
+            }
+          }
+          return state;
+        }),
+
+      deleteMeal: (date, mealType) =>
+        set((state) => {
+          const dailyMeals = state.meals[date];
+          if (!dailyMeals) return state;
+
+          const updated = { ...dailyMeals };
+          delete updated[mealType];
+
+          return {
+            meals: {
+              ...state.meals,
+              [date]: updated,
+            },
+          };
+        }),
+
+      // Add meal flow
+      startAddMeal: (type) =>
+        set({
+          addMealType: type,
+          addMealItems: [],
+          currentMealInProgress: {
+            type,
+            date: get().selectedDate,
+            time: new Date().toTimeString().slice(0, 5),
+            items: [],
+            isPlanned: false,
+          },
+        }),
+
+      addItemToMeal: (item) =>
+        set((state) => ({
+          addMealItems: [...state.addMealItems, item],
+        })),
+
+      updateMealItem: (itemId, updates) =>
+        set((state) => ({
+          addMealItems: state.addMealItems.map((item) =>
+            item.id === itemId ? { ...item, ...updates } : item
+          ),
+        })),
+
+      removeItemFromMeal: (itemId) =>
+        set((state) => ({
+          addMealItems: state.addMealItems.filter((item) => item.id !== itemId),
+        })),
+
+      saveMealInProgress: () => {
+        const { addMealType, addMealItems, selectedDate } = get();
+        if (!addMealType || addMealItems.length === 0) return;
+
+        const totalNutrition = calculateTotalNutrition(addMealItems);
+
+        const meal: Meal = {
+          id: Math.random().toString(36).substring(2, 9),
+          type: addMealType,
+          date: selectedDate,
+          time: new Date().toTimeString().slice(0, 5),
+          items: addMealItems,
+          totalNutrition,
+          source: 'manual',
+          isPlanned: false,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+
+        get().addMeal(meal);
+        set({
+          addMealType: null,
+          addMealItems: [],
+          currentMealInProgress: null,
+        });
+      },
+
+      cancelAddMeal: () =>
+        set({
+          addMealType: null,
+          addMealItems: [],
+          currentMealInProgress: null,
+        }),
+
+      // Daily nutrition
+      calculateDailyNutrition: (date) => {
+        const meals = get().meals[date];
+        if (!meals) return;
+
+        const consumed = meals.totalNutrition;
+        const target = {
+          calories: meals.caloriesGoal,
+          proteins: meals.proteinsGoal,
+          carbs: meals.carbsGoal,
+          fats: meals.fatsGoal,
+        };
+
+        const nutrition: DailyNutrition = {
+          date,
+          consumed: consumed as NutritionInfo,
+          target: target as NutritionInfo,
+          remaining: {
+            calories: target.calories - consumed.calories,
+            proteins: target.proteins - consumed.proteins,
+            carbs: target.carbs - consumed.carbs,
+            fats: target.fats - consumed.fats,
+          },
+          percentage: {
+            calories: Math.round((consumed.calories / target.calories) * 100),
+            proteins: Math.round((consumed.proteins / target.proteins) * 100),
+            carbs: Math.round((consumed.carbs / target.carbs) * 100),
+            fats: Math.round((consumed.fats / target.fats) * 100),
+          },
+        };
+
+        set((state) => ({
+          dailyNutrition: {
+            ...state.dailyNutrition,
+            [date]: nutrition,
+          },
+        }));
+      },
+
+      setDailyNutrition: (date, nutrition) =>
+        set((state) => ({
+          dailyNutrition: {
+            ...state.dailyNutrition,
+            [date]: nutrition,
+          },
+        })),
+
+      // Meal plan
+      setActiveMealPlan: (plan) => set({ activeMealPlan: plan }),
+      markMealCompleted: (date, mealType) => {
+        // Update the meal plan status
+        const { activeMealPlan } = get();
+        if (!activeMealPlan) return;
+
+        set((state) => ({
+          activeMealPlan: state.activeMealPlan
+            ? {
+                ...state.activeMealPlan,
+                days: state.activeMealPlan.days.map((day) =>
+                  day.date === date
+                    ? {
+                        ...day,
+                        [mealType]: day[mealType]
+                          ? { ...day[mealType], isCompleted: true }
+                          : undefined,
+                      }
+                    : day
+                ),
+              }
+            : null,
+        }));
+      },
+
+      // Utils
+      getMealsForDate: (date) => get().meals[date] || null,
+      getTodayNutrition: () => get().dailyNutrition[getTodayDate()] || null,
+
+      // Reset
+      reset: () => set(initialState),
+    }),
+    {
+      name: 'lym-meal-storage',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        meals: state.meals,
+        dailyNutrition: state.dailyNutrition,
+        activeMealPlan: state.activeMealPlan,
+      }),
+    }
+  )
+);
+
+// Selector hooks
+export const useSelectedDate = () => useMealStore((state) => state.selectedDate);
+export const useTodayMeals = () =>
+  useMealStore((state) => state.meals[getTodayDate()]);
+export const useSelectedDateMeals = () =>
+  useMealStore((state) => state.meals[state.selectedDate]);
+export const useAddMealItems = () => useMealStore((state) => state.addMealItems);
+export const useActiveMealPlan = () => useMealStore((state) => state.activeMealPlan);

@@ -1,0 +1,375 @@
+'use server';
+
+import { models, isAIAvailable } from '@/lib/ai/config';
+import { COACH_SYSTEM_PROMPT, MEAL_PLANNER_SYSTEM_PROMPT, MEAL_TYPE_GUIDELINES, IMAGE_GENERATION_PROMPT_TEMPLATE } from '@/lib/ai/prompts';
+import { generateUserProfileContext } from '@/lib/ai/user-context';
+import type { UserProfile } from '@/types/user';
+import type { NutritionInfo } from '@/types/meal';
+
+// Helper function to extract text from Vertex AI response
+function extractTextFromResponse(response: any): string {
+    // Try the text() method first (if available)
+    if (typeof response.text === 'function') {
+        return response.text();
+    }
+    // Fallback to candidates structure
+    if (response.candidates?.[0]?.content?.parts?.[0]?.text) {
+        return response.candidates[0].content.parts[0].text;
+    }
+    throw new Error('Unable to extract text from response');
+}
+
+// Clean JSON from markdown code blocks
+function cleanJsonResponse(text: string): string {
+    return text.replace(/```json\n?|\n?```/g, "").trim();
+}
+
+/**
+ * Chat with the AI coach
+ */
+export async function chatWithCoach(
+    message: string,
+    context?: {
+        consumed?: NutritionInfo;
+        targets?: NutritionInfo;
+    },
+    userProfile?: UserProfile
+) {
+    try {
+        if (!isAIAvailable()) {
+            return {
+                success: false,
+                error: "L'IA n'est pas configurée. Veuillez configurer GOOGLE_CLOUD_PROJECT."
+            };
+        }
+
+        const profileContext = userProfile ? generateUserProfileContext(userProfile) : '';
+
+        // Build nutrition context if available
+        let nutritionContext = '';
+        if (context?.consumed && context?.targets) {
+            const remaining = {
+                calories: Math.max(0, context.targets.calories - context.consumed.calories),
+                proteins: Math.max(0, context.targets.proteins - context.consumed.proteins),
+                carbs: Math.max(0, context.targets.carbs - context.consumed.carbs),
+                fats: Math.max(0, context.targets.fats - context.consumed.fats),
+            };
+
+            nutritionContext = `
+DONNÉES NUTRITIONNELLES AUJOURD'HUI:
+- Calories: ${Math.round(context.consumed.calories)}/${context.targets.calories} kcal (reste: ${Math.round(remaining.calories)} kcal)
+- Protéines: ${Math.round(context.consumed.proteins)}/${context.targets.proteins}g (reste: ${Math.round(remaining.proteins)}g)
+- Glucides: ${Math.round(context.consumed.carbs)}/${context.targets.carbs}g (reste: ${Math.round(remaining.carbs)}g)
+- Lipides: ${Math.round(context.consumed.fats)}/${context.targets.fats}g (reste: ${Math.round(remaining.fats)}g)
+`;
+        }
+
+        const chat = models.pro.startChat({
+            history: [
+                {
+                    role: "user",
+                    parts: [{ text: `System Context: ${COACH_SYSTEM_PROMPT}\n\n${profileContext}\n\n${nutritionContext}` }],
+                },
+                {
+                    role: "model",
+                    parts: [{ text: "Compris. Je suis prêt à vous aider en tant que coach nutritionnel personnalisé." }],
+                },
+            ],
+        });
+
+        const result = await chat.sendMessage(message);
+        const response = result.response;
+        return { success: true, message: extractTextFromResponse(response) };
+    } catch (error) {
+        console.error("Error in chatWithCoach:", error);
+        return { success: false, error: "Impossible d'obtenir une réponse du coach" };
+    }
+}
+
+/**
+ * Generate a single recipe based on request
+ */
+export async function generateRecipe(request: string, userProfile?: UserProfile) {
+    try {
+        if (!isAIAvailable()) {
+            return {
+                success: false,
+                error: "L'IA n'est pas configurée. Veuillez configurer GOOGLE_CLOUD_PROJECT."
+            };
+        }
+
+        const profileContext = userProfile ? generateUserProfileContext(userProfile) : '';
+
+        const prompt = `
+${MEAL_PLANNER_SYSTEM_PROMPT}
+
+${profileContext}
+
+Génère une recette détaillée pour : ${request}
+
+IMPORTANT:
+- La recette doit être simple et réalisable
+- Ingrédients disponibles en supermarché
+- Instructions claires étape par étape
+
+Réponds UNIQUEMENT avec un JSON valide avec cette structure exacte:
+{
+  "title": "Nom du plat",
+  "description": "Description courte et appétissante",
+  "ingredients": [
+    { "name": "ingrédient 1", "quantity": "200", "unit": "g" },
+    { "name": "ingrédient 2", "quantity": "1", "unit": "pièce" }
+  ],
+  "instructions": ["étape 1", "étape 2", "étape 3"],
+  "nutrition": {
+    "calories": 500,
+    "proteins": 30,
+    "carbs": 40,
+    "fats": 15,
+    "fiber": 5,
+    "sugar": 8,
+    "sodium": 400
+  },
+  "prepTime": 15,
+  "cookTime": 25,
+  "servings": 2,
+  "difficulty": "facile",
+  "tags": ["healthy", "rapide", "économique"]
+}
+`;
+
+        const result = await models.flash.generateContent(prompt);
+        const response = result.response;
+        const text = extractTextFromResponse(response);
+        const jsonStr = cleanJsonResponse(text);
+        const recipe = JSON.parse(jsonStr);
+
+        return { success: true, recipe };
+    } catch (error) {
+        console.error("Error in generateRecipe:", error);
+        return { success: false, error: "Impossible de générer la recette" };
+    }
+}
+
+/**
+ * Suggest a recipe based on nutritional context
+ */
+export async function suggestRecipe(context: {
+    consumed: NutritionInfo;
+    targets: NutritionInfo;
+    mealType: 'breakfast' | 'lunch' | 'snack' | 'dinner';
+    userProfile?: UserProfile;
+}) {
+    try {
+        if (!isAIAvailable()) {
+            return {
+                success: false,
+                error: "L'IA n'est pas configurée. Veuillez configurer GOOGLE_CLOUD_PROJECT."
+            };
+        }
+
+        const remaining = {
+            calories: Math.max(0, context.targets.calories - context.consumed.calories),
+            proteins: Math.max(0, context.targets.proteins - context.consumed.proteins),
+            carbs: Math.max(0, context.targets.carbs - context.consumed.carbs),
+            fats: Math.max(0, context.targets.fats - context.consumed.fats),
+        };
+
+        const profileContext = context.userProfile ? generateUserProfileContext(context.userProfile) : '';
+        const mealGuidelines = MEAL_TYPE_GUIDELINES[context.mealType] || '';
+
+        // Determine max prep time based on user profile
+        const isWeekend = new Date().getDay() === 0 || new Date().getDay() === 6;
+        const maxPrepTime = context.userProfile
+            ? (isWeekend ? context.userProfile.cookingTimeWeekend : context.userProfile.cookingTimeWeekday) || 30
+            : 30;
+
+        const prompt = `
+${MEAL_PLANNER_SYSTEM_PROMPT}
+
+${profileContext}
+
+${mealGuidelines}
+
+CONTEXTE NUTRITIONNEL UTILISATEUR:
+- Objectif journalier: ${context.targets.calories} kcal
+- Déjà consommé: ${Math.round(context.consumed.calories)} kcal
+- RESTE À CONSOMMER: ${Math.round(remaining.calories)} kcal
+
+BESOINS EN MACROS RESTANTS:
+- Protéines: ${Math.round(remaining.proteins)}g
+- Glucides: ${Math.round(remaining.carbs)}g
+- Lipides: ${Math.round(remaining.fats)}g
+
+CONTRAINTES DE TEMPS:
+- Temps de préparation maximum: ${maxPrepTime} minutes
+- Jour: ${isWeekend ? 'Weekend (plus de temps disponible)' : 'Semaine (recette rapide préférée)'}
+
+${context.userProfile?.cookingSkillLevel === 'beginner' ? 'NIVEAU DÉBUTANT: Proposer une recette simple avec peu d\'étapes et des techniques basiques.' : ''}
+${context.userProfile?.dietType ? `RÉGIME: Respecter strictement le régime ${context.userProfile.dietType}.` : ''}
+${context.userProfile?.allergies?.length ? `ALLERGIES: Éviter absolument: ${context.userProfile.allergies.join(', ')}.` : ''}
+
+TÂCHE:
+Génère une recette de ${context.mealType} qui aide à combler ces besoins restants, sans dépasser significativement les calories restantes.
+La recette doit ABSOLUMENT respecter les habitudes françaises pour ce type de repas.
+
+IMPORTANT: Pour un petit-déjeuner, NE JAMAIS proposer de plats salés complexes comme du saumon grillé, poisson, ou viandes en sauce.
+
+Réponds UNIQUEMENT avec un JSON valide avec cette structure exacte:
+{
+  "title": "Nom du plat",
+  "description": "Description courte",
+  "ingredients": [
+    { "name": "ingrédient 1", "quantity": "200", "unit": "g" }
+  ],
+  "instructions": ["étape 1", "étape 2"],
+  "nutrition": {
+    "calories": 500,
+    "proteins": 30,
+    "carbs": 40,
+    "fats": 15,
+    "fiber": 5,
+    "sugar": 8,
+    "sodium": 400
+  },
+  "prepTime": 20,
+  "cookTime": 15,
+  "servings": 1,
+  "difficulty": "facile",
+  "tags": ["healthy", "rapide"]
+}
+`;
+
+        const result = await models.pro.generateContent(prompt);
+        const response = result.response;
+        const text = extractTextFromResponse(response);
+        const jsonStr = cleanJsonResponse(text);
+        const recipe = JSON.parse(jsonStr);
+
+        return { success: true, recipe };
+    } catch (error) {
+        console.error("Error in suggestRecipe:", error);
+        return { success: false, error: "Impossible de suggérer une recette" };
+    }
+}
+
+/**
+ * Generate food image using Vertex AI Imagen 3.0
+ */
+export async function generateFoodImage(description: string): Promise<{ success: boolean; image?: string; error?: string }> {
+    try {
+        const projectId = process.env.GOOGLE_CLOUD_PROJECT;
+        const location = process.env.GOOGLE_CLOUD_LOCATION || 'us-central1';
+
+        if (!projectId) {
+            return { success: false, error: "GOOGLE_CLOUD_PROJECT not configured" };
+        }
+
+        const { v1, helpers } = await import('@google-cloud/aiplatform');
+
+        const clientOptions = {
+            apiEndpoint: `${location}-aiplatform.googleapis.com`,
+        };
+
+        const predictionServiceClient = new v1.PredictionServiceClient(clientOptions);
+        const endpoint = `projects/${projectId}/locations/${location}/publishers/google/models/imagen-3.0-generate-001`;
+
+        const prompt = IMAGE_GENERATION_PROMPT_TEMPLATE(description);
+        const instanceValue = helpers.toValue({ prompt }) as any;
+        const parameterValue = helpers.toValue({
+            sampleCount: 1,
+            aspectRatio: "1:1",
+            safetyFilterLevel: "block_some",
+            personGeneration: "allow_adult",
+        }) as any;
+
+        const result = await predictionServiceClient.predict({
+            endpoint,
+            instances: [instanceValue],
+            parameters: parameterValue,
+        } as any);
+
+        const response = result[0];
+        if (!response?.predictions || response.predictions.length === 0) {
+            throw new Error("No image generated");
+        }
+
+        const prediction = response.predictions[0];
+        const predictionValue = helpers.fromValue(prediction as any);
+        const base64Image = (predictionValue as any)?.bytesBase64Encoded;
+
+        if (!base64Image) {
+            throw new Error("No image data in response");
+        }
+
+        return { success: true, image: `data:image/png;base64,${base64Image}` };
+
+    } catch (error) {
+        console.error("Error in generateFoodImage:", error);
+        return { success: false, error: error instanceof Error ? error.message : "Failed to generate image" };
+    }
+}
+
+/**
+ * Generate multiple recipe suggestions
+ */
+export async function generateRecipeSuggestions(
+    count: number = 3,
+    mealType: 'breakfast' | 'lunch' | 'snack' | 'dinner',
+    userProfile?: UserProfile
+) {
+    try {
+        if (!isAIAvailable()) {
+            return {
+                success: false,
+                error: "L'IA n'est pas configurée. Veuillez configurer GOOGLE_CLOUD_PROJECT."
+            };
+        }
+
+        const profileContext = userProfile ? generateUserProfileContext(userProfile) : '';
+        const mealGuidelines = MEAL_TYPE_GUIDELINES[mealType] || '';
+
+        const prompt = `
+${MEAL_PLANNER_SYSTEM_PROMPT}
+
+${profileContext}
+
+${mealGuidelines}
+
+Génère ${count} suggestions de recettes pour un ${mealType === 'breakfast' ? 'petit-déjeuner' : mealType === 'lunch' ? 'déjeuner' : mealType === 'snack' ? 'collation' : 'dîner'}.
+
+IMPORTANT:
+- Recettes variées et différentes
+- Adaptées au profil utilisateur
+- Simples et réalisables
+
+Réponds UNIQUEMENT avec un JSON valide:
+{
+  "suggestions": [
+    {
+      "title": "Nom du plat",
+      "description": "Description courte",
+      "calories": 500,
+      "proteins": 30,
+      "carbs": 40,
+      "fats": 15,
+      "prepTime": 20,
+      "difficulty": "facile",
+      "tags": ["healthy", "rapide"]
+    }
+  ]
+}
+`;
+
+        const result = await models.flash.generateContent(prompt);
+        const response = result.response;
+        const text = extractTextFromResponse(response);
+        const jsonStr = cleanJsonResponse(text);
+        const data = JSON.parse(jsonStr);
+
+        return { success: true, suggestions: data.suggestions || [] };
+    } catch (error) {
+        console.error("Error in generateRecipeSuggestions:", error);
+        return { success: false, error: "Impossible de générer les suggestions" };
+    }
+}
