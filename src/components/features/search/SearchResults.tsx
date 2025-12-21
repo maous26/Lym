@@ -1,5 +1,5 @@
 'use client';
-
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Database, Globe, AlertCircle, History, TrendingUp } from 'lucide-react';
@@ -59,27 +59,41 @@ const EmptyState = ({
   </motion.div>
 );
 
-// Section header
+// Section header with expandable toggle
 const SectionHeader = ({
   icon: Icon,
   title,
   count,
   color,
+  isExpanded,
+  onToggle,
 }: {
   icon: React.ElementType;
   title: string;
   count: number;
   color: string;
+  isExpanded?: boolean;
+  onToggle?: () => void;
 }) => (
-  <div className="flex items-center gap-2 mb-3">
-    <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center', color)}>
+  <button
+    onClick={onToggle}
+    className="flex items-center gap-2 mb-3 w-full text-left group"
+  >
+    <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center transition-opacity', color)}>
       <Icon className="w-4 h-4 text-white" />
     </div>
     <span className="font-medium text-stone-700">{title}</span>
     <span className="text-xs text-stone-500 bg-stone-100 px-2 py-0.5 rounded-full">
       {count}
     </span>
-  </div>
+    {onToggle && (
+      <div className={cn("ml-auto transition-transform", isExpanded ? "rotate-180" : "")}>
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </div>
+    )}
+  </button>
 );
 
 export function SearchResults({
@@ -102,8 +116,12 @@ export function SearchResults({
   const hasResults = ciqualResults.length > 0 || offResults.length > 0;
   const isLoading = isLoadingCiqual || isLoadingOff;
 
+  // Filter state
+  const [filter, setFilter] = useState<'all' | 'ciqual' | 'off'>('all');
+
   // Show recent searches when no query
   if (!hasQuery) {
+    // ... (rest of recent searches logic)
     return (
       <div className={cn('space-y-4', className)}>
         {/* Recent searches */}
@@ -164,17 +182,66 @@ export function SearchResults({
 
   const ProductComponent = compact ? ProductCardCompact : ProductCard;
 
+  const showCiqual = (filter === 'all' || filter === 'ciqual') && (ciqualResults.length > 0 || isLoadingCiqual);
+  const showOff = (filter === 'all' || filter === 'off') && (offResults.length > 0 || isLoadingOff);
+
   return (
     <div className={cn('space-y-6', className)}>
+
+      {/* Filters */}
+      <div className="flex gap-2 pb-2 overflow-x-auto no-scrollbar">
+        <button
+          onClick={() => setFilter('all')}
+          className={cn(
+            "px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap",
+            filter === 'all'
+              ? "bg-stone-800 text-white"
+              : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+          )}
+        >
+          Tout
+        </button>
+        {(ciqualResults.length > 0 || isLoadingCiqual) && (
+          <button
+            onClick={() => setFilter('ciqual')}
+            className={cn(
+              "px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap flex items-center gap-2",
+              filter === 'ciqual'
+                ? "bg-blue-600 text-white"
+                : "bg-blue-50 text-blue-700 hover:bg-blue-100"
+            )}
+          >
+            <div className="w-2 h-2 rounded-full bg-current opacity-70" />
+            Base générique ({ciqualResults.length})
+          </button>
+        )}
+        {(offResults.length > 0 || isLoadingOff) && (
+          <button
+            onClick={() => setFilter('off')}
+            className={cn(
+              "px-3 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap flex items-center gap-2",
+              filter === 'off'
+                ? "bg-green-600 text-white"
+                : "bg-green-50 text-green-700 hover:bg-green-100"
+            )}
+          >
+            <div className="w-2 h-2 rounded-full bg-current opacity-70" />
+            Produits de marque ({offResults.length})
+          </button>
+        )}
+      </div>
+
       {/* CIQUAL Results */}
-      {(ciqualResults.length > 0 || isLoadingCiqual) && (
-        <div>
-          <SectionHeader
-            icon={Database}
-            title="Base CIQUAL"
-            count={ciqualResults.length}
-            color="bg-blue-500"
-          />
+      {showCiqual && (
+        <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+          {filter === 'all' && (
+            <SectionHeader
+              icon={Database}
+              title="Aliments génériques"
+              count={ciqualResults.length}
+              color="bg-blue-500"
+            />
+          )}
 
           {ciqualError ? (
             <div className="text-sm text-red-500 py-2">{ciqualError}</div>
@@ -204,14 +271,16 @@ export function SearchResults({
       )}
 
       {/* Open Food Facts Results */}
-      {(offResults.length > 0 || isLoadingOff) && (
-        <div>
-          <SectionHeader
-            icon={Globe}
-            title="Open Food Facts"
-            count={offResults.length}
-            color="bg-green-500"
-          />
+      {showOff && (
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 delay-75">
+          {filter === 'all' && (
+            <SectionHeader
+              icon={Globe}
+              title="Produits de marque"
+              count={offResults.length}
+              color="bg-green-500"
+            />
+          )}
 
           {offError ? (
             <div className="text-sm text-red-500 py-2">{offError}</div>

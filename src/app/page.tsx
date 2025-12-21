@@ -157,7 +157,7 @@ export default function HomePage() {
   };
 
   const handleViewMeal = (type: 'breakfast' | 'lunch' | 'snack' | 'dinner') => {
-    router.push(`/meals/${type}`);
+    router.push('/meals');
   };
 
   const handleQuickAction = (actionId: string) => {
@@ -252,23 +252,23 @@ export default function HomePage() {
     {
       type: 'lunch' as const,
       label: 'Déjeuner',
-      status: todayMeals?.lunch ? 'logged' as const : 'planned' as const,
+      status: todayMeals?.lunch ? 'logged' as const : 'empty' as const,
       calories: todayMeals?.lunch?.totalNutrition?.calories,
-      plannedRecipe: !todayMeals?.lunch ? 'Buddha Bowl Quinoa' : undefined,
+      plannedRecipe: undefined,
     },
     {
       type: 'snack' as const,
       label: 'Collation',
-      status: 'empty' as const,
-      calories: undefined,
+      status: todayMeals?.snack ? 'logged' as const : 'empty' as const,
+      calories: todayMeals?.snack?.totalNutrition?.calories,
       plannedRecipe: undefined,
     },
     {
       type: 'dinner' as const,
       label: 'Dîner',
-      status: 'planned' as const,
-      calories: undefined,
-      plannedRecipe: 'Saumon Teriyaki',
+      status: todayMeals?.dinner ? 'logged' as const : 'empty' as const,
+      calories: todayMeals?.dinner?.totalNutrition?.calories,
+      plannedRecipe: undefined,
     },
   ];
 
@@ -341,7 +341,7 @@ export default function HomePage() {
                 key={insight.id}
                 {...insight}
                 onAction={() => router.push('/coach')}
-                onDismiss={() => {}}
+                onDismiss={() => { }}
               />
             ))}
           </AnimatePresence>

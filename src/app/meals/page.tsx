@@ -9,6 +9,7 @@ import { DateSelector } from '@/components/features/meals/DateSelector';
 import { DailyNutritionSummary } from '@/components/features/meals/DailyNutritionSummary';
 import { MealSection } from '@/components/features/meals/MealSection';
 import { useMealStore, useSelectedDateMeals } from '@/store/meal-store';
+import { useSoloProfile } from '@/store/user-store';
 import type { MealType } from '@/types/meal';
 
 // Tab type
@@ -27,13 +28,16 @@ export default function MealsPage() {
   const deleteMeal = useMealStore((state) => state.deleteMeal);
   const dailyMeals = useSelectedDateMeals();
 
+  // User profile
+  const soloProfile = useSoloProfile();
+
   // Calculate daily nutrition
   const dailyNutrition = useMemo(() => {
     const targets = {
-      calories: dailyMeals?.caloriesGoal || 2000,
-      proteins: dailyMeals?.proteinsGoal || 150,
-      carbs: dailyMeals?.carbsGoal || 250,
-      fats: dailyMeals?.fatsGoal || 65,
+      calories: soloProfile?.dailyCaloriesTarget || 2000,
+      proteins: soloProfile?.proteinTarget || 150,
+      carbs: soloProfile?.carbsTarget || 250,
+      fats: soloProfile?.fatTarget || 65,
     };
 
     const consumed = dailyMeals?.totalNutrition || {
@@ -65,7 +69,7 @@ export default function MealsPage() {
         percentage: Math.round((consumed.fats / targets.fats) * 100),
       },
     };
-  }, [dailyMeals]);
+  }, [dailyMeals, soloProfile]);
 
   // Handlers
   const handleAddMeal = (mealType: MealType) => {
@@ -92,31 +96,42 @@ export default function MealsPage() {
       {/* Header */}
       <div className="bg-white shadow-sm sticky top-0 z-10">
         {/* Tabs */}
-        <div className="flex border-b border-stone-100">
+        {/* Navigation & Tabs */}
+        <div className="flex items-center border-b border-stone-100 px-2">
           <button
-            onClick={() => setActiveTab('journal')}
-            className={cn(
-              'flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors',
-              activeTab === 'journal'
-                ? 'text-primary-600 border-b-2 border-primary-600'
-                : 'text-stone-500 hover:text-stone-700'
-            )}
+            onClick={() => router.back()}
+            className="p-2 -ml-2 text-stone-500 hover:text-stone-700 transition-colors"
+            aria-label="Retour"
           >
-            <BookOpen className="w-4 h-4" />
-            Journal
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-arrow-left"><path d="m12 19-7-7 7-7" /><path d="M19 12H5" /></svg>
           </button>
-          <button
-            onClick={() => setActiveTab('calendar')}
-            className={cn(
-              'flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors',
-              activeTab === 'calendar'
-                ? 'text-primary-600 border-b-2 border-primary-600'
-                : 'text-stone-500 hover:text-stone-700'
-            )}
-          >
-            <CalendarDays className="w-4 h-4" />
-            Calendrier
-          </button>
+
+          <div className="flex flex-1">
+            <button
+              onClick={() => setActiveTab('journal')}
+              className={cn(
+                'flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors',
+                activeTab === 'journal'
+                  ? 'text-primary-600 border-b-2 border-primary-600'
+                  : 'text-stone-500 hover:text-stone-700'
+              )}
+            >
+              <BookOpen className="w-4 h-4" />
+              Journal
+            </button>
+            <button
+              onClick={() => setActiveTab('calendar')}
+              className={cn(
+                'flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors',
+                activeTab === 'calendar'
+                  ? 'text-primary-600 border-b-2 border-primary-600'
+                  : 'text-stone-500 hover:text-stone-700'
+              )}
+            >
+              <CalendarDays className="w-4 h-4" />
+              Calendrier
+            </button>
+          </div>
         </div>
 
         {/* Date Selector */}

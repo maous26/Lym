@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { Plus, Check, Clock } from 'lucide-react';
+import { Info, Check, Clock } from 'lucide-react';
 import type { MealType } from '@/types/meal';
 
 interface MealSlot {
@@ -66,7 +66,7 @@ function MealCard({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.1 }}
-      onClick={isEmpty ? onAdd : onView}
+      onClick={onView}
       className={cn(
         'relative w-full p-4 rounded-2xl text-left transition-all duration-200',
         'hover:scale-[1.02] active:scale-[0.98]',
@@ -93,7 +93,7 @@ function MealCard({
             />
           ) : (
             <span className={cn('text-xl', isEmpty && 'opacity-50')}>
-              {isEmpty ? <Plus className="w-5 h-5 text-stone-400" /> : config.icon}
+              {isEmpty ? <Info className="w-5 h-5 text-stone-400" /> : config.icon}
             </span>
           )}
         </div>
@@ -121,7 +121,7 @@ function MealCard({
 
           {isEmpty ? (
             <p className="text-xs text-stone-400 mt-0.5">
-              Ajouter un repas
+              Aucun repas enregistré
             </p>
           ) : meal.status === 'planned' && meal.plannedRecipe ? (
             <p className="text-xs text-stone-500 mt-0.5 truncate">
@@ -186,8 +186,8 @@ export function TodayMealsWidget({
                 meal.status === 'logged'
                   ? 'bg-primary-500'
                   : meal.status === 'planned'
-                  ? 'bg-amber-400'
-                  : 'bg-stone-200'
+                    ? 'bg-amber-400'
+                    : 'bg-stone-200'
               )}
             />
           ))}
