@@ -1,23 +1,42 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { Plus, CalendarDays, BookOpen, ChevronRight } from 'lucide-react';
+import { Plus, CalendarDays, BookOpen, ChevronRight, ChevronLeft, Check, Flame } from 'lucide-react';
 import { DateSelector } from '@/components/features/meals/DateSelector';
 import { DailyNutritionSummary } from '@/components/features/meals/DailyNutritionSummary';
 import { MealSection } from '@/components/features/meals/MealSection';
 import { useMealStore, useSelectedDateMeals } from '@/store/meal-store';
 import { useSoloProfile } from '@/store/user-store';
-import type { MealType } from '@/types/meal';
+import type { MealType, DailyMeals } from '@/types/meal';
 
 // Tab type
 type TabType = 'journal' | 'calendar';
 
-export default function MealsPage() {
+// Meal type emojis
+const mealTypeEmojis: Record<string, string> = {
+  breakfast: '🥐',
+  lunch: '🍽️',
+  snack: '🍎',
+  dinner: '🌙',
+};
+
+function MealsPageContent() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<TabType>('journal');
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get('tab');
+
+  const [activeTab, setActiveTab] = useState<TabType>(tabParam === 'calendar' ? 'calendar' : 'journal');
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
+
+  // Update tab when URL param changes
+  useEffect(() => {
+    if (tabParam === 'calendar') {
+      setActiveTab('calendar');
+    }
+  }, [tabParam]);
 
   // Meal store
   const selectedDate = useMealStore((state) => state.selectedDate);
@@ -26,6 +45,7 @@ export default function MealsPage() {
   const goToNextDay = useMealStore((state) => state.goToNextDay);
   const goToToday = useMealStore((state) => state.goToToday);
   const deleteMeal = useMealStore((state) => state.deleteMeal);
+  const meals = useMealStore((state) => state.meals);
   const dailyMeals = useSelectedDateMeals();
 
   // User profile
@@ -71,6 +91,58 @@ export default function MealsPage() {
     };
   }, [dailyMeals, soloProfile]);
 
+  // Generate calendar days
+  const calendarDays = useMemo(() => {
+    const year = calendarMonth.getFullYear();
+    const month = calendarMonth.getMonth();
+
+    // First day of month
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+
+    // Day of week for first day (0 = Sunday, adjust for Monday start)
+    let startDayOfWeek = firstDay.getDay() - 1;
+    if (startDayOfWeek < 0) startDayOfWeek = 6;
+
+    const days: { date: Date; isCurrentMonth: boolean; meals: DailyMeals | null }[] = [];
+
+    // Previous month days
+    for (let i = startDayOfWeek - 1; i >= 0; i--) {
+      const date = new Date(year, month, -i);
+      const dateStr = date.toISOString().split('T')[0];
+      days.push({
+        date,
+        isCurrentMonth: false,
+        meals: meals[dateStr] || null,
+      });
+    }
+
+    // Current month days
+    for (let d = 1; d <= lastDay.getDate(); d++) {
+      const date = new Date(year, month, d);
+      const dateStr = date.toISOString().split('T')[0];
+      days.push({
+        date,
+        isCurrentMonth: true,
+        meals: meals[dateStr] || null,
+      });
+    }
+
+    // Next month days to complete the grid
+    const remainingDays = 42 - days.length; // 6 rows * 7 days
+    for (let i = 1; i <= remainingDays; i++) {
+      const date = new Date(year, month + 1, i);
+      const dateStr = date.toISOString().split('T')[0];
+      days.push({
+        date,
+        isCurrentMonth: false,
+        meals: meals[dateStr] || null,
+      });
+    }
+
+    return days;
+  }, [calendarMonth, meals]);
+
   // Handlers
   const handleAddMeal = (mealType: MealType) => {
     router.push(`/meals/add?type=${mealType}&date=${selectedDate}`);
@@ -87,15 +159,61 @@ export default function MealsPage() {
   };
 
   const handleFeedback = (mealType: MealType, positive: boolean) => {
-    // TODO: Implement feedback system
     console.log(`Feedback for ${mealType}: ${positive ? 'positive' : 'negative'}`);
+  };
+
+  const handleCalendarDayClick = (date: Date) => {
+    const dateStr = date.toISOString().split('T')[0];
+    setSelectedDate(dateStr);
+    setActiveTab('journal');
+  };
+
+  const goToPreviousMonth = () => {
+    setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1));
+  };
+
+  const goToNextMonth = () => {
+    setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1));
+  };
+
+  const goToCurrentMonth = () => {
+    setCalendarMonth(new Date());
+  };
+
+  // Format month name
+  const monthName = calendarMonth.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+
+  // Check if a date is today
+  const isToday = (date: Date) => {
+    const today = new Date();
+    return date.toDateString() === today.toDateString();
+  };
+
+  // Check if a date is selected
+  const isSelected = (date: Date) => {
+    return date.toISOString().split('T')[0] === selectedDate;
+  };
+
+  // Count meals for a day
+  const getMealCount = (dayMeals: DailyMeals | null) => {
+    if (!dayMeals) return 0;
+    let count = 0;
+    if (dayMeals.breakfast) count++;
+    if (dayMeals.lunch) count++;
+    if (dayMeals.snack) count++;
+    if (dayMeals.dinner) count++;
+    return count;
+  };
+
+  // Get calories for a day
+  const getDayCalories = (dayMeals: DailyMeals | null) => {
+    return dayMeals?.totalNutrition?.calories || 0;
   };
 
   return (
     <div className="min-h-screen bg-stone-50 pb-24">
       {/* Header */}
       <div className="bg-white shadow-sm sticky top-0 z-10">
-        {/* Tabs */}
         {/* Navigation & Tabs */}
         <div className="flex items-center border-b border-stone-100 px-2">
           <button
@@ -134,14 +252,16 @@ export default function MealsPage() {
           </div>
         </div>
 
-        {/* Date Selector */}
-        <DateSelector
-          selectedDate={selectedDate}
-          onDateChange={setSelectedDate}
-          onPrevious={goToPreviousDay}
-          onNext={goToNextDay}
-          onToday={goToToday}
-        />
+        {/* Date Selector - only for journal view */}
+        {activeTab === 'journal' && (
+          <DateSelector
+            selectedDate={selectedDate}
+            onDateChange={setSelectedDate}
+            onPrevious={goToPreviousDay}
+            onNext={goToNextDay}
+            onToday={goToToday}
+          />
+        )}
       </div>
 
       {/* Content */}
@@ -214,7 +334,7 @@ export default function MealsPage() {
                     Conseil du jour
                   </h4>
                   <p className="text-sm text-stone-600">
-                    Pensez à boire au moins 1.5L d'eau par jour pour rester hydraté !
+                    Pensez a boire au moins 1.5L d'eau par jour pour rester hydrate !
                   </p>
                 </div>
                 <ChevronRight className="w-5 h-5 text-stone-400" />
@@ -227,18 +347,211 @@ export default function MealsPage() {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
-            className="px-4 py-4"
+            className="px-4 py-4 space-y-4"
           >
-            {/* Calendar view placeholder */}
-            <div className="bg-white rounded-2xl p-8 text-center">
-              <CalendarDays className="w-12 h-12 text-stone-300 mx-auto mb-4" />
-              <h3 className="font-semibold text-stone-700 mb-2">
-                Vue calendrier
-              </h3>
-              <p className="text-sm text-stone-500">
-                La vue calendrier sera bientôt disponible pour visualiser vos repas sur plusieurs jours.
-              </p>
+            {/* Month Navigation */}
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={goToPreviousMonth}
+                  className="w-10 h-10 rounded-xl bg-stone-100 flex items-center justify-center text-stone-600"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </motion.button>
+
+                <button
+                  onClick={goToCurrentMonth}
+                  className="text-lg font-semibold text-stone-800 capitalize hover:text-primary-600 transition-colors"
+                >
+                  {monthName}
+                </button>
+
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={goToNextMonth}
+                  className="w-10 h-10 rounded-xl bg-stone-100 flex items-center justify-center text-stone-600"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </motion.button>
+              </div>
+
+              {/* Day headers */}
+              <div className="grid grid-cols-7 gap-1 mb-2">
+                {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((day, idx) => (
+                  <div key={idx} className="text-center text-xs font-medium text-stone-400 py-2">
+                    {day}
+                  </div>
+                ))}
+              </div>
+
+              {/* Calendar grid */}
+              <div className="grid grid-cols-7 gap-1">
+                {calendarDays.map((day, idx) => {
+                  const mealCount = getMealCount(day.meals);
+                  const dayCalories = getDayCalories(day.meals);
+                  const calorieTarget = soloProfile?.dailyCaloriesTarget || 2000;
+                  const caloriePercentage = Math.min((dayCalories / calorieTarget) * 100, 100);
+
+                  return (
+                    <motion.button
+                      key={idx}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => handleCalendarDayClick(day.date)}
+                      className={cn(
+                        'relative aspect-square rounded-xl flex flex-col items-center justify-center p-1 transition-all',
+                        day.isCurrentMonth ? 'bg-white' : 'bg-stone-50',
+                        isToday(day.date) && 'ring-2 ring-primary-500',
+                        isSelected(day.date) && 'bg-primary-100',
+                        !day.isCurrentMonth && 'opacity-40'
+                      )}
+                    >
+                      {/* Date number */}
+                      <span className={cn(
+                        'text-sm font-medium',
+                        isToday(day.date) ? 'text-primary-600' : 'text-stone-700',
+                        isSelected(day.date) && 'text-primary-700'
+                      )}>
+                        {day.date.getDate()}
+                      </span>
+
+                      {/* Meal indicators */}
+                      {mealCount > 0 && (
+                        <div className="flex gap-0.5 mt-0.5">
+                          {day.meals?.breakfast && <span className="text-[8px]">🥐</span>}
+                          {day.meals?.lunch && <span className="text-[8px]">🍽️</span>}
+                          {day.meals?.snack && <span className="text-[8px]">🍎</span>}
+                          {day.meals?.dinner && <span className="text-[8px]">🌙</span>}
+                        </div>
+                      )}
+
+                      {/* Calorie progress bar */}
+                      {dayCalories > 0 && (
+                        <div className="absolute bottom-1 left-1 right-1 h-1 bg-stone-200 rounded-full overflow-hidden">
+                          <div
+                            className={cn(
+                              'h-full rounded-full',
+                              caloriePercentage >= 90 ? 'bg-green-500' :
+                                caloriePercentage >= 50 ? 'bg-amber-500' : 'bg-red-400'
+                            )}
+                            style={{ width: `${caloriePercentage}%` }}
+                          />
+                        </div>
+                      )}
+                    </motion.button>
+                  );
+                })}
+              </div>
             </div>
+
+            {/* Legend */}
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
+              <h4 className="font-semibold text-stone-700 mb-3">Legende</h4>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">🥐</span>
+                  <span className="text-sm text-stone-600">Petit-dejeuner</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-base">🍽️</span>
+                  <span className="text-sm text-stone-600">Dejeuner</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-base">🍎</span>
+                  <span className="text-sm text-stone-600">Collation</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-base">🌙</span>
+                  <span className="text-sm text-stone-600">Diner</span>
+                </div>
+              </div>
+
+              <div className="mt-4 pt-4 border-t border-stone-100">
+                <h5 className="text-sm font-medium text-stone-600 mb-2">Objectif calorique</h5>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-green-500" />
+                    <span className="text-xs text-stone-500">≥90%</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-amber-500" />
+                    <span className="text-xs text-stone-500">50-90%</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-red-400" />
+                    <span className="text-xs text-stone-500">&lt;50%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Selected day summary */}
+            {dailyMeals && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-white rounded-2xl p-4 shadow-sm"
+              >
+                <h4 className="font-semibold text-stone-700 mb-3">
+                  {new Date(selectedDate).toLocaleDateString('fr-FR', {
+                    weekday: 'long',
+                    day: 'numeric',
+                    month: 'long'
+                  })}
+                </h4>
+
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Flame className="w-5 h-5 text-orange-500" />
+                    <span className="text-lg font-bold text-stone-800">
+                      {dailyMeals.totalNutrition?.calories || 0} kcal
+                    </span>
+                  </div>
+                  <span className="text-sm text-stone-500">
+                    / {soloProfile?.dailyCaloriesTarget || 2000} kcal
+                  </span>
+                </div>
+
+                <div className="space-y-2">
+                  {(['breakfast', 'lunch', 'snack', 'dinner'] as const).map((type) => {
+                    const meal = dailyMeals[type];
+                    if (!meal) return null;
+
+                    return (
+                      <div
+                        key={type}
+                        className="flex items-center justify-between bg-stone-50 rounded-xl p-3"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg">{mealTypeEmojis[type]}</span>
+                          <div>
+                            <p className="text-sm font-medium text-stone-700">
+                              {meal.items?.[0]?.food?.name || 'Repas'}
+                            </p>
+                            <p className="text-xs text-stone-400">
+                              {meal.totalNutrition?.calories || 0} kcal
+                            </p>
+                          </div>
+                        </div>
+                        <Check className="w-4 h-4 text-green-500" />
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setActiveTab('journal')}
+                  className="w-full mt-3 py-2 rounded-xl bg-primary-50 text-primary-600 font-medium text-sm"
+                >
+                  Voir les details
+                </motion.button>
+              </motion.div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -256,5 +569,19 @@ export default function MealsPage() {
         <Plus className="w-7 h-7" />
       </motion.button>
     </div>
+  );
+}
+
+export default function MealsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-stone-50 flex items-center justify-center">
+          <div className="animate-spin w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full" />
+        </div>
+      }
+    >
+      <MealsPageContent />
+    </Suspense>
   );
 }

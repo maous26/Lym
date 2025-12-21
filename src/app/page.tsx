@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { useSoloProfile, useActiveMode, useIsHydrated } from '@/store/user-store';
@@ -10,14 +10,14 @@ import {
   WelcomeWidget,
   NutritionRingWidget,
   TodayMealsWidget,
-  QuickActionsWidget,
   CoachInsightWidget,
   WeekOverviewWidget,
-  WeightProgressWidget,
   RecipeSuggestionWidget,
   HydrationWidget,
-  StreakWidget,
+  WeeklyPlanWidget,
 } from '@/components/features/dashboard/widgets';
+import { WeightTracker, WeightTrackerRef } from '@/components/features/weight/WeightTracker';
+import { ConnectedDevices } from '@/components/features/weight/ConnectedDevices';
 
 // Types for widget data
 interface WeekDay {
@@ -47,11 +47,19 @@ export default function HomePage() {
   const activeMode = useActiveMode();
   const todayMeals = useTodayMeals();
 
+  // Ref for WeightTracker to refresh after sync
+  const weightTrackerRef = useRef<WeightTrackerRef>(null);
+
   // Local state for dynamic data
   const [hydration, setHydration] = useState(1200);
   const hydrationGoal = 2500;
 
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
+
+  // Handle sync completion from ConnectedDevices
+  const handleWeightSyncComplete = () => {
+    weightTrackerRef.current?.refresh();
+  };
 
   // Get greeting based on time
   const getGreeting = () => {
@@ -141,16 +149,6 @@ export default function HomePage() {
     },
   ];
 
-  const weekDaysForStreak = [
-    { day: 'L', completed: true, isToday: false },
-    { day: 'M', completed: true, isToday: false },
-    { day: 'M', completed: true, isToday: false },
-    { day: 'J', completed: true, isToday: false },
-    { day: 'V', completed: true, isToday: false },
-    { day: 'S', completed: false, isToday: true },
-    { day: 'D', completed: false, isToday: false },
-  ];
-
   // Handlers
   const handleAddMeal = (type: 'breakfast' | 'lunch' | 'snack' | 'dinner') => {
     router.push(`/meals/add?type=${type}`);
@@ -158,37 +156,6 @@ export default function HomePage() {
 
   const handleViewMeal = (type: 'breakfast' | 'lunch' | 'snack' | 'dinner') => {
     router.push('/meals');
-  };
-
-  const handleQuickAction = (actionId: string) => {
-    switch (actionId) {
-      case 'photo':
-        router.push('/meals/add?mode=photo');
-        break;
-      case 'voice':
-        router.push('/meals/add?mode=voice');
-        break;
-      case 'search':
-        router.push('/search');
-        break;
-      case 'barcode':
-        router.push('/meals/add?mode=barcode');
-        break;
-      case 'coach':
-        router.push('/coach');
-        break;
-      case 'plan':
-        router.push('/meals/plan');
-        break;
-    }
-  };
-
-  const handleAddWeight = () => {
-    router.push('/weight/add');
-  };
-
-  const handleViewWeightHistory = () => {
-    router.push('/weight');
   };
 
   const handleRecipeClick = (recipeId: string) => {
@@ -328,9 +295,11 @@ export default function HomePage() {
           />
         </section>
 
-        {/* Quick Actions */}
+        {/* Weekly Plan IA */}
         <section className="mt-6">
-          <QuickActionsWidget onAction={handleQuickAction} />
+          <WeeklyPlanWidget
+            onGeneratePlan={() => router.push('/plan')}
+          />
         </section>
 
         {/* Coach Insight */}
@@ -345,17 +314,6 @@ export default function HomePage() {
               />
             ))}
           </AnimatePresence>
-        </section>
-
-        {/* Streak Widget */}
-        <section className="mt-6">
-          <StreakWidget
-            currentStreak={5}
-            bestStreak={12}
-            weekDays={weekDaysForStreak}
-            nextMilestone={7}
-            onViewDetails={() => router.push('/achievements')}
-          />
         </section>
 
         {/* Hydration */}
@@ -390,18 +348,14 @@ export default function HomePage() {
           />
         </section>
 
-        {/* Weight Progress */}
+        {/* Weight Tracking */}
         <section className="mt-6">
-          <WeightProgressWidget
-            currentWeight={soloProfile?.weight || 0}
-            targetWeight={soloProfile?.targetWeight || 0}
-            startWeight={soloProfile?.weight || 0}
-            lastWeightDate=""
-            trend="stable"
-            trendValue={0}
-            onAddWeight={handleAddWeight}
-            onViewHistory={handleViewWeightHistory}
-          />
+          <WeightTracker ref={weightTrackerRef} />
+        </section>
+
+        {/* Connected Devices */}
+        <section className="mt-6">
+          <ConnectedDevices onSyncComplete={handleWeightSyncComplete} />
         </section>
       </main>
 

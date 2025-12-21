@@ -10,6 +10,7 @@ import {
   Sparkles,
   Camera,
   Barcode,
+  Mic,
   X,
   ShoppingBag,
 } from 'lucide-react';
@@ -18,6 +19,7 @@ import { SearchResults } from '@/components/features/search/SearchResults';
 import { QuantitySelector } from '@/components/features/search/QuantitySelector';
 import { AIMealGenerator } from '@/components/features/ai/AIMealGenerator';
 import { PhotoFoodScanner } from '@/components/features/scanner/PhotoFoodScanner';
+import { VoiceFoodInput } from '@/components/features/voice/VoiceFoodInput';
 import { useSearchStore, selectIsLoading } from '@/store/search-store';
 import type { AnalyzedFood } from '@/app/actions/food-scanner';
 import { useMealStore } from '@/store/meal-store';
@@ -27,11 +29,12 @@ import type { MealType, FoodItem, MealItem, NutritionInfo } from '@/types/meal';
 import type { MeasurementUnit } from '@/lib/unit-utils';
 
 // Tab types
-type InputTab = 'search' | 'ai' | 'photo' | 'barcode';
+type InputTab = 'search' | 'voice' | 'ai' | 'photo' | 'barcode';
 
 // Tab configuration
 const TABS: { id: InputTab; label: string; icon: React.ElementType }[] = [
   { id: 'search', label: 'Recherche', icon: Search },
+  { id: 'voice', label: 'Vocal', icon: Mic },
   { id: 'ai', label: 'IA', icon: Sparkles },
   { id: 'photo', label: 'Photo', icon: Camera },
   { id: 'barcode', label: 'Code-barres', icon: Barcode },
@@ -186,7 +189,7 @@ function AddMealContent() {
           </motion.button>
           <div className="flex-1">
             <h1 className="font-semibold text-stone-800">
-              Ajouter un aliment
+              Ajouter un aliment ou un repas
             </h1>
             <span className="text-sm text-stone-500">
               {MEAL_TYPE_LABELS[mealType]}
@@ -249,6 +252,22 @@ function AddMealContent() {
                 offError={offError}
                 onSelectProduct={handleProductSelect}
                 onRecentSearchClick={searchWithDebounce}
+              />
+            </motion.div>
+          )}
+
+          {activeTab === 'voice' && (
+            <motion.div
+              key="voice"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+            >
+              <VoiceFoodInput
+                mealType={mealType}
+                onAddToMeal={(items) => {
+                  setAddedItems((prev) => [...prev, ...items]);
+                }}
               />
             </motion.div>
           )}

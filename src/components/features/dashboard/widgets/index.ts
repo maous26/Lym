@@ -9,3 +9,4 @@ export { RecipeSuggestionWidget } from './RecipeSuggestionWidget';
 export { HydrationWidget } from './HydrationWidget';
 export { AchievementsWidget } from './AchievementsWidget';
 export { StreakWidget } from './StreakWidget';
+export { WeeklyPlanWidget } from './WeeklyPlanWidget';

@@ -487,54 +487,114 @@ export async function generateShoppingList(weeklyPlan: WeeklyPlan, budget?: numb
 
         console.log('🛒 Generating shopping list...');
 
-        // Collect all meal names
+        // Collect all meal names with details
         const allMeals: string[] = [];
         weeklyPlan.days.forEach((day) => {
             day.meals.forEach((meal) => {
                 if (meal.name && !meal.isFasting) {
-                    allMeals.push(`${meal.name} (${meal.type})`);
+                    allMeals.push(`- ${meal.name} (${meal.calories} kcal, P:${meal.proteins}g)`);
                 }
             });
         });
 
-        const budgetContext = budget ? `Budget hebdomadaire: ${budget}€` : '';
+        const budgetContext = budget ? `Budget hebdomadaire maximum: ${budget}€. Respecte ce budget!` : '';
 
         const prompt = `
-Tu es un expert en courses alimentaires en France. Voici les repas prévus pour la semaine:
+Tu es un expert en courses alimentaires en France. Tu dois générer une liste de courses COMPLÈTE et RÉALISTE.
 
+REPAS DE LA SEMAINE (${allMeals.length} repas):
 ${allMeals.join('\n')}
 
 ${budgetContext}
 
-TÂCHE:
-1. Détermine les ingrédients nécessaires pour ces repas
-2. Consolide les ingrédients similaires
-3. Organise par catégories (Fruits & Légumes, Viandes & Poissons, Produits laitiers, Épicerie, etc.)
-4. Estime les prix en France
+INSTRUCTIONS:
+1. Analyse chaque repas et détermine TOUS les ingrédients nécessaires
+2. Consolide les ingrédients similaires (ex: 3 repas avec oignons = 1kg d'oignons)
+3. Estime les quantités réalistes pour une personne sur la semaine
+4. Utilise les prix moyens en France (supermarchés classiques)
+5. Organise par rayon de supermarché
 
-Réponds UNIQUEMENT avec un JSON valide:
+CATÉGORIES À UTILISER:
+- Fruits & Légumes
+- Viandes & Poissons
+- Produits Laitiers & Oeufs
+- Épicerie Salée
+- Épicerie Sucrée
+- Boulangerie
+- Surgelés
+- Boissons
+
+Réponds UNIQUEMENT avec ce JSON (pas de texte avant ou après):
 {
   "categories": [
     {
       "name": "Fruits & Légumes",
       "items": [
-        { "name": "Tomates", "quantity": "2kg", "priceEstimate": 4.50 }
+        { "name": "Tomates grappe", "quantity": "1 kg", "priceEstimate": 3.50 },
+        { "name": "Oignons", "quantity": "500g", "priceEstimate": 1.20 },
+        { "name": "Carottes", "quantity": "1 kg", "priceEstimate": 1.80 }
       ],
-      "subtotal": 15.50
+      "subtotal": 6.50
+    },
+    {
+      "name": "Viandes & Poissons",
+      "items": [
+        { "name": "Filets de poulet", "quantity": "600g", "priceEstimate": 8.50 },
+        { "name": "Steak haché 5%", "quantity": "400g", "priceEstimate": 5.20 }
+      ],
+      "subtotal": 13.70
     }
   ],
-  "totalEstimate": 85.50,
-  "savingsTips": ["Astuce 1", "Astuce 2"]
+  "totalEstimate": 75.50,
+  "savingsTips": [
+    "Achetez les légumes de saison pour économiser",
+    "Les marques distributeur offrent un bon rapport qualité-prix",
+    "Vérifiez les promotions sur les viandes en fin de journée"
+  ]
 }
 `;
 
-        const result = await models.flash.generateContent(prompt);
+        const result = await models.pro.generateContent(prompt);
         const text = extractTextFromResponse(result.response);
         const jsonStr = cleanJsonResponse(text);
-        const shoppingList = JSON.parse(jsonStr);
+
+        let shoppingList;
+        try {
+            shoppingList = JSON.parse(jsonStr);
+        } catch (parseError) {
+            console.error("JSON parse error:", parseError);
+            console.log("Raw response:", text);
+            // Try to extract JSON from response
+            const jsonMatch = text.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                shoppingList = JSON.parse(jsonMatch[0]);
+            } else {
+                throw new Error("Could not parse shopping list JSON");
+            }
+        }
+
+        // Validate the structure
+        if (!shoppingList.categories || !Array.isArray(shoppingList.categories)) {
+            throw new Error("Invalid shopping list structure");
+        }
+
+        // Recalculate totals to ensure accuracy
+        let total = 0;
+        shoppingList.categories.forEach((cat: any) => {
+            let catTotal = 0;
+            if (cat.items && Array.isArray(cat.items)) {
+                cat.items.forEach((item: any) => {
+                    catTotal += item.priceEstimate || 0;
+                });
+            }
+            cat.subtotal = Math.round(catTotal * 100) / 100;
+            total += catTotal;
+        });
+        shoppingList.totalEstimate = Math.round(total * 100) / 100;
 
         console.log('✅ Shopping list generated!');
         console.log(`💰 Total estimate: ${shoppingList.totalEstimate}€`);
+        console.log(`📦 Categories: ${shoppingList.categories.length}`);
 
         return { success: true, shoppingList };
     } catch (error) {

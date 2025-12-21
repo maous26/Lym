@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { Info, Check, Clock } from 'lucide-react';
+import { Plus, Check, Clock, Utensils } from 'lucide-react';
 import type { MealType } from '@/types/meal';
 
 interface MealSlot {
@@ -23,26 +23,50 @@ interface TodayMealsWidgetProps {
   className?: string;
 }
 
-const mealConfig: Record<MealType, { icon: string; label: string; gradient: string }> = {
+const mealConfig: Record<MealType, {
+  icon: string;
+  label: string;
+  gradient: string;
+  bgLight: string;
+  textColor: string;
+  borderColor: string;
+  placeholderImage: string;
+}> = {
   breakfast: {
     icon: '🌅',
     label: 'Petit-déj',
-    gradient: 'from-amber-400 to-orange-400',
+    gradient: 'from-amber-400 to-orange-500',
+    bgLight: 'bg-amber-50',
+    textColor: 'text-amber-600',
+    borderColor: 'border-amber-200',
+    placeholderImage: '/petit-dej.png',
   },
   lunch: {
     icon: '☀️',
     label: 'Déjeuner',
-    gradient: 'from-emerald-400 to-teal-400',
+    gradient: 'from-emerald-400 to-teal-500',
+    bgLight: 'bg-emerald-50',
+    textColor: 'text-emerald-600',
+    borderColor: 'border-emerald-200',
+    placeholderImage: '/dejeuner.png',
   },
   snack: {
     icon: '🍎',
     label: 'Collation',
-    gradient: 'from-pink-400 to-rose-400',
+    gradient: 'from-pink-400 to-rose-500',
+    bgLight: 'bg-pink-50',
+    textColor: 'text-pink-600',
+    borderColor: 'border-pink-200',
+    placeholderImage: '/collation.png',
   },
   dinner: {
     icon: '🌙',
     label: 'Dîner',
-    gradient: 'from-indigo-400 to-purple-400',
+    gradient: 'from-indigo-400 to-purple-500',
+    bgLight: 'bg-indigo-50',
+    textColor: 'text-indigo-600',
+    borderColor: 'border-indigo-200',
+    placeholderImage: '/diner.png',
   },
 };
 
@@ -60,28 +84,48 @@ function MealCard({
   const config = mealConfig[meal.type];
   const isEmpty = meal.status === 'empty';
   const isLogged = meal.status === 'logged';
+  const isPlanned = meal.status === 'planned';
 
   return (
-    <motion.button
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.1 }}
-      onClick={onView}
+    <motion.div
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: index * 0.1, type: 'spring', stiffness: 100 }}
+      whileHover={{ scale: 1.02, y: -2 }}
+      whileTap={{ scale: 0.98 }}
+      onClick={isEmpty ? onAdd : onView}
       className={cn(
-        'relative w-full p-4 rounded-2xl text-left transition-all duration-200',
-        'hover:scale-[1.02] active:scale-[0.98]',
+        'relative w-full p-4 rounded-2xl cursor-pointer transition-all duration-300',
+        'border-2 overflow-hidden',
         isEmpty
-          ? 'bg-stone-50 border-2 border-dashed border-stone-200 hover:border-stone-300'
-          : 'bg-white shadow-card hover:shadow-card-hover'
+          ? `${config.bgLight} ${config.borderColor} border-dashed hover:border-solid`
+          : isLogged
+            ? 'bg-white border-transparent shadow-lg hover:shadow-xl'
+            : `${config.bgLight} ${config.borderColor}`
       )}
     >
-      <div className="flex items-center gap-3">
-        {/* Icon ou Image */}
-        <div
+      {/* Animated background gradient for logged meals */}
+      {isLogged && (
+        <motion.div
           className={cn(
-            'w-12 h-12 rounded-xl flex items-center justify-center shrink-0',
+            'absolute inset-0 opacity-10 bg-gradient-to-r',
+            config.gradient
+          )}
+          initial={{ x: '-100%' }}
+          animate={{ x: '100%' }}
+          transition={{ duration: 3, repeat: Infinity, repeatType: 'loop' }}
+        />
+      )}
+
+      <div className="relative flex items-center gap-4">
+        {/* Icon Container */}
+        <motion.div
+          whileHover={{ rotate: [0, -10, 10, 0] }}
+          transition={{ duration: 0.5 }}
+          className={cn(
+            'w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-md overflow-hidden',
             isEmpty
-              ? 'bg-stone-100'
+              ? `border-2 ${config.borderColor}`
               : `bg-gradient-to-br ${config.gradient}`
           )}
         >
@@ -89,65 +133,99 @@ function MealCard({
             <img
               src={meal.imageUrl}
               alt={meal.name}
-              className="w-full h-full object-cover rounded-xl"
+              className="w-full h-full object-cover"
             />
           ) : (
-            <span className={cn('text-xl', isEmpty && 'opacity-50')}>
-              {isEmpty ? <Info className="w-5 h-5 text-stone-400" /> : config.icon}
-            </span>
+            <img
+              src={config.placeholderImage}
+              alt={config.label}
+              className={cn(
+                'w-full h-full object-cover',
+                isEmpty && 'opacity-50 grayscale'
+              )}
+            />
           )}
-        </div>
+        </motion.div>
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 mb-1">
             <span className={cn(
-              'text-sm font-semibold',
-              isEmpty ? 'text-stone-400' : 'text-stone-800'
+              'text-base font-bold',
+              isEmpty ? config.textColor : 'text-gray-800'
             )}>
               {config.label}
             </span>
+
             {isLogged && (
-              <span className="flex items-center justify-center w-4 h-4 rounded-full bg-green-100">
-                <Check className="w-3 h-3 text-green-600" />
-              </span>
+              <motion.span
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="flex items-center justify-center w-5 h-5 rounded-full bg-green-500 shadow-sm"
+              >
+                <Check className="w-3 h-3 text-white" strokeWidth={3} />
+              </motion.span>
             )}
-            {meal.status === 'planned' && (
-              <span className="flex items-center justify-center w-4 h-4 rounded-full bg-amber-100">
-                <Clock className="w-3 h-3 text-amber-600" />
-              </span>
+
+            {isPlanned && (
+              <motion.span
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 shadow-sm"
+              >
+                <Clock className="w-3 h-3 text-white" strokeWidth={3} />
+              </motion.span>
             )}
           </div>
 
           {isEmpty ? (
-            <p className="text-xs text-stone-400 mt-0.5">
+            <p className={cn('text-sm', config.textColor, 'opacity-70')}>
               Aucun repas enregistré
             </p>
-          ) : meal.status === 'planned' && meal.plannedRecipe ? (
-            <p className="text-xs text-stone-500 mt-0.5 truncate">
+          ) : isPlanned && meal.plannedRecipe ? (
+            <p className="text-sm text-gray-600 truncate">
               {meal.plannedRecipe}
-              <span className="ml-1 text-amber-500 font-medium">· Planifié</span>
+              <span className="ml-2 px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-medium">
+                Planifié
+              </span>
             </p>
           ) : (
-            <p className="text-xs text-stone-500 mt-0.5 truncate">
-              {meal.name}
+            <div className="flex items-center gap-2">
+              <p className="text-sm text-gray-600 truncate">
+                {meal.name || 'Repas enregistré'}
+              </p>
               {meal.calories && (
-                <span className="ml-1 text-stone-400">
-                  · {meal.calories} kcal
+                <span className={cn(
+                  'px-2 py-0.5 rounded-full text-xs font-semibold',
+                  config.bgLight, config.textColor
+                )}>
+                  {meal.calories} kcal
                 </span>
               )}
-            </p>
+            </div>
           )}
         </div>
 
-        {/* Time badge */}
-        {meal.time && (
-          <span className="text-xs text-stone-400 shrink-0">
+        {/* Time badge or Add button */}
+        {isEmpty ? (
+          <motion.div
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            className={cn(
+              'w-10 h-10 rounded-xl flex items-center justify-center',
+              `bg-gradient-to-br ${config.gradient}`,
+              'shadow-md'
+            )}
+          >
+            <Plus className="w-5 h-5 text-white" />
+          </motion.div>
+        ) : meal.time ? (
+          <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded-lg">
             {meal.time}
           </span>
-        )}
+        ) : null}
       </div>
-    </motion.button>
+    </motion.div>
   );
 }
 
@@ -157,40 +235,82 @@ export function TodayMealsWidget({
   onViewMeal,
   className,
 }: TodayMealsWidgetProps) {
-  // Compter les repas loggés
   const loggedCount = meals.filter((m) => m.status === 'logged').length;
   const totalCount = meals.length;
+  const progress = (loggedCount / totalCount) * 100;
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className={cn('', className)}
+      className={cn('bg-white rounded-3xl p-5 shadow-sm border border-gray-100', className)}
     >
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h2 className="text-lg font-bold text-stone-800">Aujourd'hui</h2>
-          <p className="text-sm text-stone-500">
-            {loggedCount}/{totalCount} repas enregistrés
-          </p>
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-3">
+          <motion.div
+            animate={{ rotate: [0, 10, -10, 0] }}
+            transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+            className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center shadow-lg"
+          >
+            <Utensils className="w-6 h-6 text-white" />
+          </motion.div>
+          <div>
+            <h2 className="text-lg font-bold text-gray-800">Aujourd'hui</h2>
+            <p className="text-sm text-gray-500">
+              {loggedCount}/{totalCount} repas enregistrés
+            </p>
+          </div>
         </div>
 
-        {/* Mini progress */}
-        <div className="flex items-center gap-1">
-          {meals.map((meal, i) => (
-            <div
-              key={meal.type}
-              className={cn(
-                'w-2 h-2 rounded-full transition-colors',
-                meal.status === 'logged'
-                  ? 'bg-primary-500'
-                  : meal.status === 'planned'
-                    ? 'bg-amber-400'
-                    : 'bg-stone-200'
-              )}
+        {/* Circular progress */}
+        <div className="relative w-14 h-14">
+          <svg className="w-full h-full transform -rotate-90">
+            <circle
+              cx="28"
+              cy="28"
+              r="24"
+              stroke="currentColor"
+              strokeWidth="4"
+              fill="none"
+              className="text-gray-100"
             />
-          ))}
+            <motion.circle
+              cx="28"
+              cy="28"
+              r="24"
+              stroke="url(#progressGradient)"
+              strokeWidth="4"
+              fill="none"
+              strokeLinecap="round"
+              initial={{ strokeDasharray: '0 150.8' }}
+              animate={{ strokeDasharray: `${progress * 1.508} 150.8` }}
+              transition={{ duration: 1, delay: 0.5 }}
+            />
+            <defs>
+              <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#10b981" />
+                <stop offset="100%" stopColor="#059669" />
+              </linearGradient>
+            </defs>
+          </svg>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-sm font-bold text-gray-700">
+              {Math.round(progress)}%
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Progress bar */}
+      <div className="mb-5">
+        <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+          <motion.div
+            className="h-full bg-gradient-to-r from-primary-400 to-primary-600 rounded-full"
+            initial={{ width: 0 }}
+            animate={{ width: `${progress}%` }}
+            transition={{ duration: 1, delay: 0.3 }}
+          />
         </div>
       </div>
 

@@ -41,16 +41,69 @@ export function PhotoFoodScanner({ onFoodDetected, mealType }: PhotoFoodScannerP
     // Start camera
     const startCamera = useCallback(async () => {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({
-                video: {
-                    facingMode: 'environment',
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 }
-                }
-            });
+            // Try with environment camera first (back camera on mobile)
+            let stream: MediaStream | null = null;
 
-            if (videoRef.current) {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: { ideal: 'environment' },
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    },
+                    audio: false
+                });
+            } catch {
+                // Fallback: try without facingMode constraint (use any available camera)
+                console.log('Environment camera not available, trying default camera');
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    },
+                    audio: false
+                });
+            }
+
+            if (videoRef.current && stream) {
                 videoRef.current.srcObject = stream;
+
+                // Wait for video to be ready before playing
+                await new Promise<void>((resolve, reject) => {
+                    const video = videoRef.current!;
+
+                    const onLoadedMetadata = () => {
+                        video.removeEventListener('loadedmetadata', onLoadedMetadata);
+                        video.removeEventListener('error', onError);
+                        resolve();
+                    };
+
+                    const onError = (e: Event) => {
+                        video.removeEventListener('loadedmetadata', onLoadedMetadata);
+                        video.removeEventListener('error', onError);
+                        reject(new Error('Video failed to load'));
+                    };
+
+                    // If already loaded, resolve immediately
+                    if (video.readyState >= 1) {
+                        resolve();
+                    } else {
+                        video.addEventListener('loadedmetadata', onLoadedMetadata);
+                        video.addEventListener('error', onError);
+                    }
+
+                    // Timeout after 5 seconds
+                    setTimeout(() => {
+                        video.removeEventListener('loadedmetadata', onLoadedMetadata);
+                        video.removeEventListener('error', onError);
+                        resolve(); // Resolve anyway to try playing
+                    }, 5000);
+                });
+
+                // Ensure video attributes are set for mobile
+                videoRef.current.setAttribute('playsinline', 'true');
+                videoRef.current.setAttribute('webkit-playsinline', 'true');
+
                 await videoRef.current.play();
             }
 
@@ -58,7 +111,7 @@ export function PhotoFoodScanner({ onFoodDetected, mealType }: PhotoFoodScannerP
             setState('camera');
         } catch (err) {
             console.error('Camera access denied:', err);
-            setError("Impossible d'accéder à la caméra. Vérifiez les permissions.");
+            setError("Impossible d'accéder à la caméra. Vérifiez les permissions ou essayez avec un autre navigateur.");
             setState('error');
         }
     }, []);
@@ -226,6 +279,7 @@ export function PhotoFoodScanner({ onFoodDetected, mealType }: PhotoFoodScannerP
                                 autoPlay
                                 playsInline
                                 muted
+                                webkit-playsinline="true"
                                 className="w-full h-full object-cover"
                             />
 

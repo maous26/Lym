@@ -1,12 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
     Bluetooth, Smartphone, Watch, Scale, Wifi, WifiOff,
-    RefreshCw, X, Heart
+    RefreshCw, X, Heart, Check
 } from 'lucide-react';
-import { getConnectedDevices, disconnectDevice, addConnectedDevice } from '@/app/actions/weight';
+import {
+    getConnectedDevices,
+    disconnectDevice,
+    addConnectedDevice,
+    syncFromHealthPlatform
+} from '@/app/actions/weight';
 
 interface Device {
     id: string;
@@ -16,6 +21,12 @@ interface Device {
     platform: string;
     isConnected: boolean;
     lastSyncAt: Date | null;
+}
+
+interface SyncResult {
+    success: boolean;
+    synced: number;
+    message?: string;
 }
 
 const DEVICE_ICONS: Record<string, any> = {
@@ -35,16 +46,38 @@ const BRAND_INFO: Record<string, { name: string; color: string; logo: string }> 
     samsung: { name: 'Samsung Health', color: 'bg-blue-600', logo: '' },
 };
 
-export function ConnectedDevices() {
+interface ConnectedDevicesProps {
+    onSyncComplete?: () => void;
+}
+
+export function ConnectedDevices({ onSyncComplete }: ConnectedDevicesProps = {}) {
     const [devices, setDevices] = useState<Device[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSyncing, setIsSyncing] = useState(false);
+    const [syncResult, setSyncResult] = useState<SyncResult | null>(null);
     const [healthPlatform, setHealthPlatform] = useState<'apple_health' | 'google_fit' | 'none'>('none');
 
     useEffect(() => {
         loadDevices();
         checkHealthPlatform();
     }, []);
+
+    // Auto-sync when devices are loaded and connected
+    useEffect(() => {
+        const connectedDevices = devices.filter(d => d.isConnected);
+        if (connectedDevices.length > 0 && healthPlatform !== 'none') {
+            // Auto-sync on first load only if not already syncing
+            const lastSync = connectedDevices[0]?.lastSyncAt;
+            const hoursSinceSync = lastSync
+                ? (Date.now() - new Date(lastSync).getTime()) / (1000 * 60 * 60)
+                : Infinity;
+
+            // Auto-sync if last sync was more than 1 hour ago
+            if (hoursSinceSync > 1) {
+                handleSyncWeightData();
+            }
+        }
+    }, [devices, healthPlatform]);
 
     const loadDevices = async () => {
         setIsLoading(true);
@@ -64,6 +97,69 @@ export function ConnectedDevices() {
             setHealthPlatform('none');
         }
     };
+
+    // Synchronize weight data from health platform
+    const handleSyncWeightData = useCallback(async () => {
+        if (isSyncing || healthPlatform === 'none') return;
+
+        setIsSyncing(true);
+        setSyncResult(null);
+
+        try {
+            const { initHealthService, requestHealthPermissions, fetchWeightFromHealthPlatform } =
+                await import('@/lib/health/health-service');
+
+            const { available, platform } = await initHealthService();
+
+            if (!available) {
+                setSyncResult({ success: false, synced: 0, message: 'Plateforme non disponible' });
+                return;
+            }
+
+            const { granted } = await requestHealthPermissions();
+            if (!granted) {
+                setSyncResult({ success: false, synced: 0, message: 'Permissions refusées' });
+                return;
+            }
+
+            // Fetch last 30 days of weight data
+            const startDate = new Date();
+            startDate.setDate(startDate.getDate() - 30);
+
+            const healthData = await fetchWeightFromHealthPlatform(startDate);
+
+            if (healthData.length > 0) {
+                const result = await syncFromHealthPlatform(
+                    'default',
+                    platform as 'apple_health' | 'google_fit',
+                    healthData
+                );
+
+                setSyncResult({
+                    success: result.success,
+                    synced: result.synced,
+                    message: result.message || result.error
+                });
+
+                // Reload devices to update lastSyncAt
+                loadDevices();
+
+                // Notify parent component to refresh weight data
+                if (result.success && onSyncComplete) {
+                    onSyncComplete();
+                }
+            } else {
+                setSyncResult({ success: true, synced: 0, message: 'Aucune nouvelle donnée' });
+            }
+        } catch (error) {
+            console.error('Erreur sync:', error);
+            setSyncResult({ success: false, synced: 0, message: 'Erreur de synchronisation' });
+        } finally {
+            setIsSyncing(false);
+            // Clear sync result after 5 seconds
+            setTimeout(() => setSyncResult(null), 5000);
+        }
+    }, [isSyncing, healthPlatform, onSyncComplete]);
 
     const handleConnectHealthPlatform = async () => {
         if (healthPlatform === 'none') {
@@ -137,7 +233,40 @@ export function ConnectedDevices() {
                         </p>
                     </div>
                 </div>
+                {/* Sync button */}
+                {devices.filter(d => d.isConnected).length > 0 && (
+                    <button
+                        onClick={handleSyncWeightData}
+                        disabled={isSyncing}
+                        className="p-2 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50"
+                        title="Synchroniser les pesées"
+                    >
+                        <RefreshCw className={`h-5 w-5 ${isSyncing ? 'animate-spin text-purple-500' : 'text-gray-500'}`} />
+                    </button>
+                )}
             </div>
+
+            {/* Sync Result Banner */}
+            {syncResult && (
+                <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className={`mb-4 p-3 rounded-xl flex items-center gap-2 ${
+                        syncResult.success ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+                    }`}
+                >
+                    {syncResult.success ? (
+                        <Check className="h-5 w-5" />
+                    ) : (
+                        <X className="h-5 w-5" />
+                    )}
+                    <span className="text-sm font-medium">
+                        {syncResult.message}
+                        {syncResult.synced > 0 && ` (${syncResult.synced} pesée(s))`}
+                    </span>
+                </motion.div>
+            )}
 
             {/* Liste des appareils */}
             {devices.length > 0 ? (

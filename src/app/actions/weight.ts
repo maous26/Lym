@@ -73,31 +73,118 @@ export interface ConnectedDevice {
 
 /**
  * Ajouter une nouvelle entrée de poids
+ * Si une entrée existe déjà pour le même jour et la même source, elle sera mise à jour
  */
 export async function addWeightEntry(input: WeightEntryInput) {
     try {
-        const userId = input.userId;
-        if (!userId) throw new Error("User ID is required");
+        // Use 'default' as fallback userId for development
+        let userId = input.userId || 'default';
+        const measuredAt = input.measuredAt || new Date();
+        const source = input.source || 'manual';
 
-        const entry = await prisma.weightEntry.create({
-            data: {
-                userId,
-                weight: input.weight,
-                bodyFat: input.bodyFat,
-                muscleMass: input.muscleMass,
-                waterPercentage: input.waterPercentage,
-                source: input.source || 'manual',
-                deviceName: input.deviceName,
-                notes: input.notes,
-                measuredAt: input.measuredAt || new Date(),
+        // Ensure the default user exists (for development)
+        if (userId === 'default') {
+            const existingUser = await prisma.user.findUnique({
+                where: { id: 'default' }
+            });
+
+            if (!existingUser) {
+                await prisma.user.create({
+                    data: {
+                        id: 'default',
+                        email: 'default@local.dev',
+                        name: 'Utilisateur Local',
+                    }
+                });
             }
+        }
+
+        // Get start and end of the day for the measurement date
+        const startOfDay = new Date(measuredAt);
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(measuredAt);
+        endOfDay.setHours(23, 59, 59, 999);
+
+        // Check if an entry already exists for this day and source
+        const existingEntry = await prisma.weightEntry.findFirst({
+            where: {
+                userId,
+                source,
+                measuredAt: {
+                    gte: startOfDay,
+                    lte: endOfDay,
+                },
+            },
         });
 
-        // Convert Prisma dates to simpler types if needed, but Server Actions support Date
+        let entry;
+
+        if (existingEntry) {
+            // Update existing entry
+            entry = await prisma.weightEntry.update({
+                where: { id: existingEntry.id },
+                data: {
+                    weight: input.weight,
+                    bodyFat: input.bodyFat,
+                    muscleMass: input.muscleMass,
+                    waterPercentage: input.waterPercentage,
+                    deviceName: input.deviceName,
+                    notes: input.notes,
+                    measuredAt,
+                },
+            });
+        } else {
+            // Create new entry
+            entry = await prisma.weightEntry.create({
+                data: {
+                    userId,
+                    weight: input.weight,
+                    bodyFat: input.bodyFat,
+                    muscleMass: input.muscleMass,
+                    waterPercentage: input.waterPercentage,
+                    source,
+                    deviceName: input.deviceName,
+                    notes: input.notes,
+                    measuredAt,
+                },
+            });
+        }
+
         return { success: true, entry: entry as WeightEntry };
     } catch (error) {
         console.error('Error adding weight entry:', error);
         return { success: false, error: 'Échec de l\'enregistrement du poids' };
+    }
+}
+
+/**
+ * Modifier une entrée de poids existante
+ */
+export async function updateWeightEntry(
+    entryId: string,
+    input: Partial<WeightEntryInput>,
+    userId: string = 'default'
+) {
+    try {
+        const entry = await prisma.weightEntry.update({
+            where: {
+                id: entryId,
+                userId, // Ensure user owns the entry
+            },
+            data: {
+                weight: input.weight,
+                bodyFat: input.bodyFat,
+                muscleMass: input.muscleMass,
+                waterPercentage: input.waterPercentage,
+                notes: input.notes,
+                measuredAt: input.measuredAt,
+            }
+        });
+
+        return { success: true, entry: entry as WeightEntry };
+    } catch (error) {
+        console.error('Error updating weight entry:', error);
+        return { success: false, error: 'Échec de la modification du poids' };
     }
 }
 

@@ -1,7 +1,7 @@
 // CIQUAL French Food Database Search Service
 // Uses the official ANSES CIQUAL database for accurate French nutritional data
 
-import ciqualRaw from '@/data/Table_Ciqual_2020V2.json';
+import ciqualRaw from '@/data/Table_Ciqual_2020_Complete.json';
 import Fuse from 'fuse.js';
 import { Product } from '@/types/product';
 
@@ -36,8 +36,11 @@ const ciqualProducts: Product[] = ((ciqualRaw as any).data as any[]).map((item) 
   const fiber = parseValue(m?.fibres);
   const sugar = parseValue(m?.sucres);
 
-  // Calculate energy using Atwater factors: 4*P + 4*C + 9*F + 2*Fiber
-  const calories = Math.round((proteins * 4) + (carbs * 4) + (fats * 9) + (fiber * 2));
+  // Use energy from file if available, otherwise calculate using Atwater factors
+  const energyFromFile = parseValue(m?.energie);
+  const calories = energyFromFile > 0
+    ? Math.round(energyFromFile)
+    : Math.round((proteins * 4) + (carbs * 4) + (fats * 9) + (fiber * 2));
 
   // Parse sodium (mg) and convert to g for consistency
   const sodiumMg = parseValue(mi?.sodium);
