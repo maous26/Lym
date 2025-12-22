@@ -39,7 +39,7 @@ const mealConfig: Record<MealType, {
     bgLight: 'bg-amber-50',
     textColor: 'text-amber-600',
     borderColor: 'border-amber-200',
-    placeholderImage: '/petit-dej.png',
+    placeholderImage: '/petit-dej.png?v=2',
   },
   lunch: {
     icon: '☀️',
@@ -48,7 +48,7 @@ const mealConfig: Record<MealType, {
     bgLight: 'bg-emerald-50',
     textColor: 'text-emerald-600',
     borderColor: 'border-emerald-200',
-    placeholderImage: '/dejeuner.png',
+    placeholderImage: '/dejeuner.png?v=2',
   },
   snack: {
     icon: '🍎',
@@ -57,7 +57,7 @@ const mealConfig: Record<MealType, {
     bgLight: 'bg-pink-50',
     textColor: 'text-pink-600',
     borderColor: 'border-pink-200',
-    placeholderImage: '/collation.png',
+    placeholderImage: '/collation.png?v=2',
   },
   dinner: {
     icon: '🌙',
@@ -66,7 +66,7 @@ const mealConfig: Record<MealType, {
     bgLight: 'bg-indigo-50',
     textColor: 'text-indigo-600',
     borderColor: 'border-indigo-200',
-    placeholderImage: '/diner.png',
+    placeholderImage: '/diner.png?v=2',
   },
 };
 
