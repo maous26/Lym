@@ -34,7 +34,7 @@ const mealConfig: Record<MealType, {
 }> = {
   breakfast: {
     icon: '🌅',
-    label: 'Petit-déj',
+    label: 'Petit-déjeuner',
     gradient: 'from-amber-400 to-orange-500',
     bgLight: 'bg-amber-50',
     textColor: 'text-amber-600',
