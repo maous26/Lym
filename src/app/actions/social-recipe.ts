@@ -126,7 +126,16 @@ async function getInstagramContent(videoId: string): Promise<string> {
 // ============================================
 
 function cleanJsonResponse(text: string): string {
-    return text.replace(/```json\n?|\n?```/g, '').trim();
+    // Remove markdown code blocks
+    let cleaned = text.replace(/```json\n?|\n?```/g, '').trim();
+
+    // Try to extract JSON if there's extra text around it
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+        cleaned = jsonMatch[0];
+    }
+
+    return cleaned;
 }
 
 async function extractRecipeFromTranscript(transcript: string, videoUrl: string): Promise<ExtractedRecipe> {
@@ -134,56 +143,50 @@ async function extractRecipeFromTranscript(transcript: string, videoUrl: string)
         throw new Error("L'IA n'est pas configurée");
     }
 
-    const prompt = `Tu es un expert culinaire et nutritionniste. Analyse ce transcript d'une vidéo de recette et extrais TOUTES les informations.
+    // Clean transcript - remove potentially problematic content
+    const cleanedTranscript = transcript
+        .substring(0, 15000)
+        .replace(/[^\w\sàâäéèêëïîôùûüÿçœæ.,!?;:'"()-]/gi, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
 
-TRANSCRIPT:
+    const prompt = `Tu es un assistant culinaire. Ta tâche est d'analyser ce transcript de vidéo de cuisine et d'extraire les informations de la recette.
+
+TRANSCRIPT DE LA VIDÉO:
 """
-${transcript.substring(0, 15000)}
+${cleanedTranscript}
 """
 
-URL source: ${videoUrl}
+TÂCHE: Extrais les informations de cette recette de cuisine. C'est une tâche d'extraction d'information, pas de génération de contenu problématique.
 
-INSTRUCTIONS:
-1. TITRE DE LA RECETTE (TRÈS IMPORTANT):
-   - Si le titre est mentionné explicitement dans le transcript, utilise-le
-   - SINON, CRÉE un titre descriptif et appétissant basé sur:
-     * L'ingrédient principal (viande, poisson, légume, etc.)
-     * La méthode de cuisson (grillé, mijoté, rôti, etc.)
-     * L'origine ou le style si évident (à l'italienne, façon asiatique, etc.)
-   - Exemples de bons titres: "Poulet rôti aux herbes de Provence", "Curry de légumes crémeux", "Saumon grillé sauce citronnée"
-   - NE JAMAIS utiliser "Recette inconnue" ou des titres génériques
+RÈGLES:
+1. TITRE: Crée un titre descriptif basé sur les ingrédients principaux mentionnés (ex: "Poulet aux légumes", "Pâtes à la carbonara")
+2. INGRÉDIENTS: Liste tous les ingrédients mentionnés avec quantités estimées
+3. INSTRUCTIONS: Résume les étapes de préparation
+4. NUTRITION: Estime les calories et macros basées sur les ingrédients typiques
+5. Si le transcript ne contient pas de recette claire, crée une recette simple basée sur les aliments mentionnés
 
-2. Liste TOUS les ingrédients avec leurs quantités PRÉCISES (convertis en grammes/ml si possible)
-3. Rédige les instructions étape par étape de façon claire
-4. CALCULE les valeurs nutritionnelles basées sur les quantités d'ingrédients:
-   - Utilise les valeurs nutritionnelles standard des aliments
-   - Calcule pour 1 portion
-5. Estime le temps de préparation et de cuisson
-6. Détermine la difficulté (facile, moyen, difficile)
-7. Ajoute des tags pertinents (végétarien, rapide, français, etc.)
+IMPORTANT: Réponds UNIQUEMENT avec le JSON ci-dessous, sans texte avant ou après:
 
-Si des informations manquent, fais des estimations raisonnables basées sur le contexte.
-
-RÉPONDS UNIQUEMENT avec ce JSON valide:
 {
-  "title": "Nom de la recette",
-  "description": "Description appétissante en 1-2 phrases",
+  "title": "Nom descriptif de la recette",
+  "description": "Description courte et appétissante",
   "ingredients": [
-    { "name": "Ingrédient", "quantity": "200", "unit": "g" }
+    { "name": "ingredient", "quantity": "100", "unit": "g" }
   ],
   "instructions": [
-    "Étape 1: ...",
-    "Étape 2: ..."
+    "Étape 1",
+    "Étape 2"
   ],
   "nutrition": {
-    "calories": 450,
-    "proteins": 25,
-    "carbs": 35,
-    "fats": 18,
+    "calories": 400,
+    "proteins": 20,
+    "carbs": 40,
+    "fats": 15,
     "fiber": 5
   },
   "prepTime": 15,
-  "cookTime": 25,
+  "cookTime": 20,
   "servings": 4,
   "difficulty": "facile",
   "tags": ["tag1", "tag2"]
@@ -199,11 +202,23 @@ RÉPONDS UNIQUEMENT avec ce JSON valide:
     } else if (response.candidates?.[0]?.content?.parts?.[0]?.text) {
         text = response.candidates[0].content.parts[0].text;
     } else {
-        throw new Error('Impossible d\'extraire la réponse');
+        throw new Error('Impossible d\'extraire la réponse de l\'IA');
     }
 
     const jsonStr = cleanJsonResponse(text);
-    return JSON.parse(jsonStr);
+
+    // Validate it's actually JSON before parsing
+    if (!jsonStr.startsWith('{')) {
+        console.error('AI response is not JSON:', text.substring(0, 200));
+        throw new Error('L\'IA n\'a pas pu analyser cette vidéo. Essayez avec une autre vidéo de recette.');
+    }
+
+    try {
+        return JSON.parse(jsonStr);
+    } catch (parseError) {
+        console.error('JSON parse error:', parseError, 'Response:', jsonStr.substring(0, 500));
+        throw new Error('Erreur lors de l\'analyse de la recette. Essayez avec une autre vidéo.');
+    }
 }
 
 // ============================================
