@@ -38,63 +38,52 @@ export function PhotoFoodScanner({ onFoodDetected, mealType }: PhotoFoodScannerP
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    // Callback ref to attach stream when video element mounts
+    const setVideoRef = useCallback((video: HTMLVideoElement | null) => {
+        if (video && cameraStream) {
+            video.srcObject = cameraStream;
+            video.muted = true;
+            video.playsInline = true;
+
+            video.onloadedmetadata = () => {
+                video.play().catch(err => {
+                    console.log('Video play error:', err);
+                });
+            };
+        }
+        // Also keep the regular ref updated
+        (videoRef as React.MutableRefObject<HTMLVideoElement | null>).current = video;
+    }, [cameraStream]);
+
     // Start camera
     const startCamera = useCallback(async () => {
         try {
-            // Try with environment camera first (back camera on mobile)
             let stream: MediaStream | null = null;
 
-            // Simpler constraints for better iOS compatibility
-            const constraints = {
-                video: {
-                    facingMode: 'environment',
-                    width: { ideal: 1280, max: 1920 },
-                    height: { ideal: 720, max: 1080 }
-                },
-                audio: false
-            };
-
             try {
-                stream = await navigator.mediaDevices.getUserMedia(constraints);
+                // Try environment camera (back camera) first
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment' },
+                    audio: false
+                });
             } catch {
-                // Fallback: try with minimal constraints
-                console.log('Environment camera not available, trying default camera');
+                // Fallback to any camera
+                console.log('Environment camera not available, trying default');
                 stream = await navigator.mediaDevices.getUserMedia({
                     video: true,
                     audio: false
                 });
             }
 
-            // Store stream and change state FIRST so video element renders
             setCameraStream(stream);
             setState('camera');
 
         } catch (err) {
             console.error('Camera access denied:', err);
-            setError("Impossible d'accéder à la caméra. Vérifiez les permissions dans Réglages > Safari > Caméra.");
+            setError("Impossible d'accéder à la caméra. Vérifiez les permissions.");
             setState('error');
         }
     }, []);
-
-    // Attach stream to video element when both are available
-    useEffect(() => {
-        if (cameraStream && videoRef.current && state === 'camera') {
-            const video = videoRef.current;
-
-            // Set attributes for iOS
-            video.setAttribute('autoplay', 'true');
-            video.setAttribute('playsinline', 'true');
-            video.setAttribute('webkit-playsinline', 'true');
-            video.muted = true;
-
-            video.srcObject = cameraStream;
-
-            // Play video
-            video.play().catch(err => {
-                console.log('Video play error:', err);
-            });
-        }
-    }, [cameraStream, state]);
 
     // Stop camera
     const stopCamera = useCallback(() => {
@@ -255,12 +244,10 @@ export function PhotoFoodScanner({ onFoodDetected, mealType }: PhotoFoodScannerP
                     >
                         <div className="relative rounded-2xl overflow-hidden bg-black aspect-[4/3]">
                             <video
-                                ref={videoRef}
+                                ref={setVideoRef}
                                 autoPlay
                                 playsInline
                                 muted
-                                controls={false}
-                                style={{ objectFit: 'cover' }}
                                 className="w-full h-full object-cover"
                             />
 
