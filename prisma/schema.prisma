@@ -88,6 +88,7 @@ model User {
   connectedDevices ConnectedDevice[]
   meals            Meal[]
   mealPlans        MealPlan[]
+  submittedRecipes Recipe[]  @relation("SubmittedRecipes")
 }
 
 model VerificationToken {
@@ -234,7 +235,7 @@ model PlannedMeal {
   day           MealPlanDay @relation(fields: [mealPlanDayId], references: [id], onDelete: Cascade)
 }
 
-// Recipe Models - For AI-generated recipes that can be rated and commented
+// Recipe Models - For AI-generated and community recipes
 model Recipe {
   id            String   @id @default(cuid())
 
@@ -259,9 +260,22 @@ model Recipe {
   instructions  String   // JSON array of steps
   tags          String?  // JSON array of tags
 
-  // AI Generation metadata
+  // Source & AI metadata
+  source        String   @default("ai") // ai, youtube, instagram, community
   generatedBy   String   @default("gemini") // gemini, openai, manual
   promptContext String?  // What the user asked for
+
+  // Video source fields (YouTube/Instagram)
+  videoUrl      String?  // Original video URL
+  videoId       String?  // Platform video ID
+  thumbnailUrl  String?  // Video thumbnail
+  videoPlatform String?  // youtube, instagram, tiktok
+  transcript    String?  // Raw transcript for RAG
+
+  // Community/Author fields
+  authorId      String?
+  author        User?    @relation("SubmittedRecipes", fields: [authorId], references: [id])
+  status        String   @default("approved") // pending, approved, rejected
 
   // Aggregated ratings (cached for performance)
   averageRating Float    @default(0)
@@ -274,6 +288,8 @@ model Recipe {
 
   @@index([averageRating])
   @@index([createdAt])
+  @@index([source, status, averageRating])
+  @@index([authorId])
 }
 
 model RecipeRating {

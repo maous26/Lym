@@ -3,7 +3,8 @@
 import prisma from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { awardXp, incrementStat, updateStreak, XP_REWARDS } from './gamification';
+import { awardXp, incrementStat, updateStreak } from './gamification';
+import { XP_REWARDS } from '@/lib/gamification-utils';
 
 // ============================================
 // RECIPE TYPES
