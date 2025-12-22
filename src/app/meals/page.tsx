@@ -290,7 +290,7 @@ function MealsPageContent() {
   };
 
   return (
-    <div className="min-h-screen bg-stone-50 pb-24">
+    <div className="min-h-screen bg-gradient-to-b from-orange-50 via-amber-50 to-white pb-24">
       {/* Header */}
       <div className="bg-white shadow-sm sticky top-0 z-10">
         {/* Navigation & Tabs */}
@@ -804,7 +804,7 @@ export default function MealsPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-stone-50 flex items-center justify-center">
+        <div className="min-h-screen bg-gradient-to-b from-orange-50 via-amber-50 to-white flex items-center justify-center">
           <div className="animate-spin w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full" />
         </div>
       }
