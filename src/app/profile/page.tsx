@@ -99,7 +99,7 @@ export default function ProfilePage() {
 
     const handleLogout = async () => {
         if (confirm('Etes-vous sur de vouloir vous deconnecter ?')) {
-            await signOut({ callbackUrl: '/auth/login' });
+            await signOut({ callbackUrl: '/welcome' });
         }
     };
 

@@ -86,7 +86,12 @@ export const authOptions: NextAuthOptions = {
       // Si URL relative, utiliser baseUrl
       if (url.startsWith("/")) return `${baseUrl}${url}`;
       // Si même domaine, autoriser
-      if (new URL(url).origin === baseUrl) return url;
+      try {
+        if (new URL(url).origin === baseUrl) return url;
+      } catch {
+        // URL invalide, retourner baseUrl
+        return baseUrl;
+      }
       // Sinon rediriger vers home
       return baseUrl;
     },

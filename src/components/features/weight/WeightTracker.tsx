@@ -333,7 +333,11 @@ function WeightGraph({
   );
 }
 
-export const WeightTracker = forwardRef<WeightTrackerRef>(function WeightTracker(_props, ref) {
+interface WeightTrackerProps {
+  hideHeader?: boolean;
+}
+
+export const WeightTracker = forwardRef<WeightTrackerRef, WeightTrackerProps>(function WeightTracker({ hideHeader = false }, ref) {
   const profile = useSoloProfile();
   const updateSoloProfile = useUserStore((state) => state.updateSoloProfile);
   const [entries, setEntries] = useState<WeightEntry[]>([]);
@@ -600,40 +604,42 @@ export const WeightTracker = forwardRef<WeightTrackerRef>(function WeightTracker
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-100"
+        className={hideHeader ? "p-4 sm:p-5" : "bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-100"}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-              <Scale className="h-5 w-5 text-white" />
+        {/* Header - hidden when used in collapsible container */}
+        {!hideHeader && (
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+                <Scale className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900">Suivi du poids</h3>
+                <p className="text-xs text-gray-500">
+                  {stats?.lastUpdated
+                    ? `Mis à jour ${new Date(stats.lastUpdated).toLocaleDateString('fr-FR')}`
+                    : 'Aucune donnée'}
+                  {connectedEntries > 0 && (
+                    <span className="ml-1 text-green-600">• {connectedEntries} sync</span>
+                  )}
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="font-bold text-gray-900">Suivi du poids</h3>
-              <p className="text-xs text-gray-500">
-                {stats?.lastUpdated
-                  ? `Mis à jour ${new Date(stats.lastUpdated).toLocaleDateString('fr-FR')}`
-                  : 'Aucune donnée'}
-                {connectedEntries > 0 && (
-                  <span className="ml-1 text-green-600">• {connectedEntries} sync</span>
-                )}
-              </p>
-            </div>
+            <button
+              onClick={handleSync}
+              disabled={isSyncing}
+              className={cn(
+                'p-2 rounded-lg transition-colors disabled:opacity-50',
+                isSyncing ? 'bg-blue-50' : 'hover:bg-gray-100'
+              )}
+              title="Synchroniser avec Apple Santé / Google Fit"
+            >
+              <RefreshCw
+                className={cn('h-5 w-5', isSyncing ? 'animate-spin text-blue-500' : 'text-gray-500')}
+              />
+            </button>
           </div>
-          <button
-            onClick={handleSync}
-            disabled={isSyncing}
-            className={cn(
-              'p-2 rounded-lg transition-colors disabled:opacity-50',
-              isSyncing ? 'bg-blue-50' : 'hover:bg-gray-100'
-            )}
-            title="Synchroniser avec Apple Santé / Google Fit"
-          >
-            <RefreshCw
-              className={cn('h-5 w-5', isSyncing ? 'animate-spin text-blue-500' : 'text-gray-500')}
-            />
-          </button>
-        </div>
+        )}
 
         {/* Current Weight + Stats */}
         <div className="flex items-center justify-between mb-4">

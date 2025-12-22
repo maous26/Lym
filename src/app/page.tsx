@@ -18,6 +18,7 @@ import {
 } from '@/components/features/dashboard/widgets';
 import { WeightTracker, WeightTrackerRef } from '@/components/features/weight/WeightTracker';
 import { ConnectedDevices } from '@/components/features/weight/ConnectedDevices';
+import { ChevronDown, ChevronUp, Scale, Bluetooth } from 'lucide-react';
 
 // Types for widget data
 interface WeekDay {
@@ -50,16 +51,22 @@ export default function HomePage() {
   // Ref for WeightTracker to refresh after sync
   const weightTrackerRef = useRef<WeightTrackerRef>(null);
 
+  // Collapsible states for widgets
+  const [isWeightExpanded, setIsWeightExpanded] = useState(false);
+  const [isDevicesExpanded, setIsDevicesExpanded] = useState(false);
+  const [hasConnectedDevice, setHasConnectedDevice] = useState(false);
+
+  // Handle sync completion from ConnectedDevices
+  const handleWeightSyncComplete = () => {
+    weightTrackerRef.current?.refresh();
+    setHasConnectedDevice(true);
+  };
+
   // Local state for dynamic data
   const [hydration, setHydration] = useState(1200);
   const hydrationGoal = 2500;
 
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
-
-  // Handle sync completion from ConnectedDevices
-  const handleWeightSyncComplete = () => {
-    weightTrackerRef.current?.refresh();
-  };
 
   // Get greeting based on time
   const getGreeting = () => {
@@ -349,14 +356,76 @@ export default function HomePage() {
           />
         </section>
 
-        {/* Weight Tracking */}
+        {/* Weight Tracking - Collapsible */}
         <section className="mt-6">
-          <WeightTracker ref={weightTrackerRef} />
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <button
+              onClick={() => setIsWeightExpanded(!isWeightExpanded)}
+              className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+                  <Scale className="h-5 w-5 text-white" />
+                </div>
+                <span className="font-bold text-gray-900">Suivi du poids</span>
+              </div>
+              {isWeightExpanded ? (
+                <ChevronUp className="h-5 w-5 text-gray-400" />
+              ) : (
+                <ChevronDown className="h-5 w-5 text-gray-400" />
+              )}
+            </button>
+            <AnimatePresence>
+              {isWeightExpanded && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="overflow-hidden border-t border-gray-100"
+                >
+                  <WeightTracker ref={weightTrackerRef} hideHeader />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </section>
 
-        {/* Connected Devices */}
+        {/* Connected Devices - Collapsible */}
         <section className="mt-6">
-          <ConnectedDevices onSyncComplete={handleWeightSyncComplete} />
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <button
+              onClick={() => setIsDevicesExpanded(!isDevicesExpanded)}
+              className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center">
+                  <Bluetooth className="h-5 w-5 text-white" />
+                </div>
+                <span className="font-bold text-gray-900">
+                  {hasConnectedDevice ? 'Appareil connecté' : 'Connecter un appareil'}
+                </span>
+              </div>
+              {isDevicesExpanded ? (
+                <ChevronUp className="h-5 w-5 text-gray-400" />
+              ) : (
+                <ChevronDown className="h-5 w-5 text-gray-400" />
+              )}
+            </button>
+            <AnimatePresence>
+              {isDevicesExpanded && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="overflow-hidden border-t border-gray-100"
+                >
+                  <ConnectedDevices onSyncComplete={handleWeightSyncComplete} hideHeader />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </section>
       </main>
 

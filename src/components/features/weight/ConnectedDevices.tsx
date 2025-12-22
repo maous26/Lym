@@ -48,9 +48,10 @@ const BRAND_INFO: Record<string, { name: string; color: string; logo: string }> 
 
 interface ConnectedDevicesProps {
     onSyncComplete?: () => void;
+    hideHeader?: boolean;
 }
 
-export function ConnectedDevices({ onSyncComplete }: ConnectedDevicesProps = {}) {
+export function ConnectedDevices({ onSyncComplete, hideHeader = false }: ConnectedDevicesProps) {
     const [devices, setDevices] = useState<Device[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSyncing, setIsSyncing] = useState(false);
@@ -218,33 +219,35 @@ export function ConnectedDevices({ onSyncComplete }: ConnectedDevicesProps = {})
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100"
+            className={hideHeader ? "p-5" : "bg-white rounded-2xl p-5 shadow-sm border border-gray-100"}
         >
-            {/* Header */}
-            <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                    <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center">
-                        <Bluetooth className="h-5 w-5 text-white" />
+            {/* Header - hidden when used in collapsible container */}
+            {!hideHeader && (
+                <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center">
+                            <Bluetooth className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                            <h3 className="font-bold text-gray-900">Appareils connectés</h3>
+                            <p className="text-xs text-gray-500">
+                                {devices.filter(d => d.isConnected).length} appareil(s) actif(s)
+                            </p>
+                        </div>
                     </div>
-                    <div>
-                        <h3 className="font-bold text-gray-900">Appareils connectés</h3>
-                        <p className="text-xs text-gray-500">
-                            {devices.filter(d => d.isConnected).length} appareil(s) actif(s)
-                        </p>
-                    </div>
+                    {/* Sync button */}
+                    {devices.filter(d => d.isConnected).length > 0 && (
+                        <button
+                            onClick={handleSyncWeightData}
+                            disabled={isSyncing}
+                            className="p-2 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50"
+                            title="Synchroniser les pesées"
+                        >
+                            <RefreshCw className={`h-5 w-5 ${isSyncing ? 'animate-spin text-purple-500' : 'text-gray-500'}`} />
+                        </button>
+                    )}
                 </div>
-                {/* Sync button */}
-                {devices.filter(d => d.isConnected).length > 0 && (
-                    <button
-                        onClick={handleSyncWeightData}
-                        disabled={isSyncing}
-                        className="p-2 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50"
-                        title="Synchroniser les pesées"
-                    >
-                        <RefreshCw className={`h-5 w-5 ${isSyncing ? 'animate-spin text-purple-500' : 'text-gray-500'}`} />
-                    </button>
-                )}
-            </div>
+            )}
 
             {/* Sync Result Banner */}
             {syncResult && (
