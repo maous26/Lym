@@ -556,18 +556,6 @@ function MealsPageContent() {
         )}
       </AnimatePresence>
 
-      {/* Floating Add Button */}
-      <motion.button
-        initial={{ scale: 0 }}
-        animate={{ scale: 1 }}
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
-        onClick={() => handleAddMeal('lunch')}
-        className="fixed bottom-24 right-4 w-14 h-14 bg-primary-600 text-white rounded-2xl shadow-lg flex items-center justify-center z-20"
-        aria-label="Ajouter un repas"
-      >
-        <Plus className="w-7 h-7" />
-      </motion.button>
     </div>
   );
 }

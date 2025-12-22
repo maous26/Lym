@@ -24,7 +24,6 @@ interface NavItem {
 const navItems: NavItem[] = [
   { href: '/', icon: Home, label: 'Accueil' },
   { href: '/meals', icon: UtensilsCrossed, label: 'Repas' },
-  { href: '/meals/add', icon: Plus, label: 'Ajouter' },
   { href: '/coach', icon: MessageCircle, label: 'Coach' },
   { href: '/profile', icon: User, label: 'Profil' },
 ];
@@ -64,31 +63,7 @@ export function BottomNav({ variant = 'solo', className }: BottomNavProps) {
       <div className="flex items-center justify-around px-2 h-16">
         {items.map((item, index) => {
           const isActive = index === activeIndex;
-          const isAddButton = item.href === '/meals/add';
           const Icon = item.icon;
-
-          if (isAddButton) {
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="relative -mt-6"
-              >
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className={cn(
-                    'w-14 h-14 rounded-full flex items-center justify-center',
-                    'bg-gradient-to-br from-primary-500 to-primary-600',
-                    'shadow-btn-emerald',
-                    'text-white'
-                  )}
-                >
-                  <Icon className="w-6 h-6" />
-                </motion.div>
-              </Link>
-            );
-          }
 
           return (
             <Link
