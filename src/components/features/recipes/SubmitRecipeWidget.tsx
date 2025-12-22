@@ -90,10 +90,16 @@ export function SubmitRecipeWidget({ onSuccess }: SubmitRecipeWidgetProps) {
             setEditedRecipe(result.extractedRecipe as ExtractedRecipe);
             setStep('preview');
         } else {
-            if (result.error?.includes('description')) {
+            // Check if we need manual description (no subtitles available)
+            if (result.error === 'NEED_DESCRIPTION') {
                 setShowDescriptionField(true);
+                setError('Cette vidéo n\'a pas de sous-titres. Veuillez décrire la recette ci-dessous (ingrédients, étapes de préparation...)');
+            } else if (result.error?.includes('description')) {
+                setShowDescriptionField(true);
+                setError(result.error);
+            } else {
+                setError(result.error || 'Erreur inconnue');
             }
-            setError(result.error || 'Erreur inconnue');
         }
 
         setIsLoading(false);
@@ -280,23 +286,26 @@ export function SubmitRecipeWidget({ onSuccess }: SubmitRecipeWidgetProps) {
                                         )}
                                     </div>
 
-                                    {/* Description field for Instagram/TikTok */}
+                                    {/* Description field when no subtitles available */}
                                     {showDescriptionField && (
                                         <motion.div
                                             initial={{ height: 0, opacity: 0 }}
                                             animate={{ height: 'auto', opacity: 1 }}
                                             className="mb-4"
                                         >
-                                            <label className="text-sm text-gray-600 mb-2 block">
-                                                Description de la recette (pour Instagram/TikTok)
+                                            <label className="text-sm font-medium text-gray-700 mb-2 block">
+                                                Décrivez la recette
                                             </label>
                                             <textarea
                                                 value={description}
                                                 onChange={(e) => setDescription(e.target.value)}
-                                                placeholder="Copiez la description de la vidéo ou décrivez la recette..."
+                                                placeholder="Exemple: Poulet grillé avec 500g de poulet, 2 gousses d'ail, huile d'olive. Faire mariner le poulet 30 min puis griller 20 min de chaque côté..."
                                                 className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-500 focus:border-transparent resize-none"
-                                                rows={4}
+                                                rows={5}
                                             />
+                                            <p className="text-xs text-gray-400 mt-1">
+                                                Incluez les ingrédients avec quantités et les étapes de préparation
+                                            </p>
                                         </motion.div>
                                     )}
 

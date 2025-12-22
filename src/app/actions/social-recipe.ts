@@ -103,7 +103,7 @@ function parseVideoUrl(url: string): VideoInfo | null {
 // TRANSCRIPT EXTRACTION
 // ============================================
 
-async function getYouTubeTranscript(videoId: string): Promise<string> {
+async function getYouTubeTranscript(videoId: string): Promise<string | null> {
     try {
         const { YoutubeTranscript } = await import('youtube-transcript');
         const transcript = await YoutubeTranscript.fetchTranscript(videoId);
@@ -113,17 +113,16 @@ async function getYouTubeTranscript(videoId: string): Promise<string> {
         console.log('YouTube transcript length:', fullText.length);
         console.log('YouTube transcript preview:', fullText.substring(0, 500));
 
-        if (fullText.length < 100) {
-            throw new Error('Le transcript de cette vidéo est trop court. La vidéo n\'a peut-être pas de sous-titres détaillés.');
+        if (fullText.length < 50) {
+            console.log('Transcript too short, returning null');
+            return null;
         }
 
         return fullText;
     } catch (error) {
         console.error('Error fetching YouTube transcript:', error);
-        if (error instanceof Error && error.message.includes('transcript')) {
-            throw error;
-        }
-        throw new Error('Impossible de récupérer les sous-titres de cette vidéo. Assurez-vous que la vidéo a des sous-titres disponibles.');
+        // Return null to trigger manual description fallback
+        return null;
     }
 }
 
@@ -275,16 +274,23 @@ export async function extractVideoRecipe(videoUrl: string, manualDescription?: s
         }
 
         // Get transcript based on platform
-        let transcript: string;
+        let transcript: string | null = null;
 
         if (videoInfo.platform === 'youtube') {
             transcript = await getYouTubeTranscript(videoInfo.videoId);
-        } else if (manualDescription) {
+        }
+
+        // Use manual description if provided or if transcript not available
+        if (manualDescription && manualDescription.trim().length > 0) {
             transcript = manualDescription;
-        } else {
+        }
+
+        // If no transcript available, ask for manual description
+        if (!transcript || transcript.length < 50) {
             return {
                 success: false,
-                error: 'Pour Instagram/TikTok, veuillez ajouter une description de la recette.'
+                error: 'NEED_DESCRIPTION', // Special code to trigger description field
+                // Cleaner message for display
             };
         }
 
@@ -434,17 +440,21 @@ export async function submitVideoRecipe(videoUrl: string, manualDescription?: st
         }
 
         // Get transcript based on platform
-        let transcript: string;
+        let transcript: string | null = null;
 
         if (videoInfo.platform === 'youtube') {
             transcript = await getYouTubeTranscript(videoInfo.videoId);
-        } else if (manualDescription) {
-            // For Instagram/TikTok, use manual description
+        }
+
+        // Use manual description if provided or if transcript not available
+        if (manualDescription && manualDescription.trim().length > 0) {
             transcript = manualDescription;
-        } else {
+        }
+
+        if (!transcript || transcript.length < 50) {
             return {
                 success: false,
-                error: 'Pour Instagram/TikTok, veuillez ajouter une description de la recette.'
+                error: 'Impossible de récupérer les sous-titres. Veuillez ajouter une description de la recette.'
             };
         }
 
