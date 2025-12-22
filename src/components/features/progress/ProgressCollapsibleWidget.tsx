@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, ChevronUp, TrendingDown, Flame, Award } from 'lucide-react';
 import { PeriodSelector, type Period } from './PeriodSelector';
 import { MacroBalanceWidget } from './MacroBalanceWidget';
-import { CoachInsightsWidget } from './CoachInsightsWidget';
 import { NutritionTrendChart } from './NutritionTrendChart';
 
 interface ProgressCollapsibleWidgetProps {
@@ -227,14 +226,6 @@ export function ProgressCollapsibleWidget({ meals, targets, weightProgress }: Pr
                                 period={period}
                                 data={periodData.chartData}
                                 targetCalories={targets.calories}
-                            />
-
-                            {/* Coach Insights */}
-                            <CoachInsightsWidget
-                                period={period}
-                                data={periodData.macroData}
-                                streak={streak}
-                                mealsLogged={totalMeals}
                             />
                         </div>
                     </motion.div>
