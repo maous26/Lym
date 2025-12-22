@@ -6,7 +6,6 @@ import {
     Camera,
     Upload,
     X,
-    Loader2,
     Check,
     AlertCircle,
     RefreshCw,
@@ -14,7 +13,11 @@ import {
     ChevronDown,
     ChevronUp,
     Sparkles,
-    Image as ImageIcon
+    Image as ImageIcon,
+    Flame,
+    Beef,
+    Wheat,
+    Droplet
 } from 'lucide-react';
 import { analyzeFoodPhoto, type AnalyzedFood, type FoodAnalysisResult } from '@/app/actions/food-scanner';
 import type { NutritionInfo } from '@/types/meal';
@@ -362,52 +365,87 @@ export function PhotoFoodScanner({ onFoodDetected, mealType }: PhotoFoodScannerP
                         exit={{ opacity: 0, y: -10 }}
                         className="space-y-4"
                     >
-                        {/* Success header */}
-                        <div className="flex items-center gap-3 p-4 bg-green-50 rounded-xl border border-green-200">
-                            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                                <Check className="w-5 h-5 text-green-600" />
+                        {/* Success header - Animated banner */}
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 p-4 text-white shadow-lg"
+                        >
+                            <div className="flex items-center gap-3">
+                                <motion.div
+                                    initial={{ scale: 0 }}
+                                    animate={{ scale: 1 }}
+                                    transition={{ type: "spring", delay: 0.2 }}
+                                    className="w-12 h-12 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center"
+                                >
+                                    <Check className="w-6 h-6" />
+                                </motion.div>
+                                <div>
+                                    <p className="font-bold text-lg">Analyse terminée !</p>
+                                    <p className="text-white/80 text-sm">
+                                        {analysisResult.foods.length} aliment{analysisResult.foods.length > 1 ? 's' : ''} détecté{analysisResult.foods.length > 1 ? 's' : ''}
+                                    </p>
+                                </div>
                             </div>
-                            <div>
-                                <p className="font-medium text-green-800">
-                                    {analysisResult.foods.length} aliment{analysisResult.foods.length > 1 ? 's' : ''} détecté{analysisResult.foods.length > 1 ? 's' : ''}
-                                </p>
-                                {analysisResult.notes && (
-                                    <p className="text-xs text-green-600">{analysisResult.notes}</p>
-                                )}
-                            </div>
-                        </div>
+                        </motion.div>
 
-                        {/* Total nutrition summary */}
+                        {/* Total nutrition summary - Enhanced */}
                         {analysisResult.totalNutrition && (
-                            <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-4">
-                                <h4 className="text-sm font-medium text-stone-600 mb-3">Total estimé</h4>
-                                <div className="grid grid-cols-4 gap-2">
+                            <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.1 }}
+                                className="bg-white rounded-2xl p-5 shadow-lg border border-stone-100"
+                            >
+                                <div className="flex items-center justify-between mb-4">
+                                    <h4 className="text-sm font-semibold text-stone-600 uppercase tracking-wide">
+                                        Valeurs nutritionnelles
+                                    </h4>
+                                    <span className="text-xs font-medium text-purple-600 bg-purple-50 px-2 py-1 rounded-full">
+                                        Estimation IA
+                                    </span>
+                                </div>
+
+                                {/* Calories - Hero display */}
+                                <div className="flex items-center justify-center mb-5">
                                     <div className="text-center">
-                                        <p className="text-lg font-bold text-purple-600">
-                                            {Math.round(analysisResult.totalNutrition.calories)}
-                                        </p>
-                                        <p className="text-xs text-stone-500">kcal</p>
+                                        <div className="w-24 h-24 mx-auto mb-2 rounded-full bg-gradient-to-br from-purple-100 to-pink-100 flex items-center justify-center">
+                                            <div className="text-center">
+                                                <Flame className="w-5 h-5 text-purple-500 mx-auto mb-1" />
+                                                <p className="text-2xl font-bold text-purple-600">
+                                                    {Math.round(analysisResult.totalNutrition.calories)}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <p className="text-xs text-stone-500 font-medium">calories</p>
                                     </div>
-                                    <div className="text-center">
+                                </div>
+
+                                {/* Macros - Card grid */}
+                                <div className="grid grid-cols-3 gap-3">
+                                    <div className="bg-blue-50 rounded-xl p-3 text-center">
+                                        <Beef className="w-5 h-5 text-blue-500 mx-auto mb-1" />
                                         <p className="text-lg font-bold text-blue-600">
                                             {Math.round(analysisResult.totalNutrition.proteins)}g
                                         </p>
-                                        <p className="text-xs text-stone-500">Prot.</p>
+                                        <p className="text-xs text-stone-500">Protéines</p>
                                     </div>
-                                    <div className="text-center">
+                                    <div className="bg-amber-50 rounded-xl p-3 text-center">
+                                        <Wheat className="w-5 h-5 text-amber-500 mx-auto mb-1" />
                                         <p className="text-lg font-bold text-amber-600">
                                             {Math.round(analysisResult.totalNutrition.carbs)}g
                                         </p>
-                                        <p className="text-xs text-stone-500">Gluc.</p>
+                                        <p className="text-xs text-stone-500">Glucides</p>
                                     </div>
-                                    <div className="text-center">
+                                    <div className="bg-rose-50 rounded-xl p-3 text-center">
+                                        <Droplet className="w-5 h-5 text-rose-500 mx-auto mb-1" />
                                         <p className="text-lg font-bold text-rose-600">
                                             {Math.round(analysisResult.totalNutrition.fats)}g
                                         </p>
-                                        <p className="text-xs text-stone-500">Lip.</p>
+                                        <p className="text-xs text-stone-500">Lipides</p>
                                     </div>
                                 </div>
-                            </div>
+                            </motion.div>
                         )}
 
                         {/* Detected foods list */}
