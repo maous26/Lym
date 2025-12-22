@@ -219,7 +219,7 @@ model PlannedMeal {
   id            String @id @default(cuid())
   mealPlanDayId String
   type          String // breakfast, lunch, snack, dinner
-  
+
   // Recipe details (snapshot)
   title         String
   description   String?
@@ -228,8 +228,132 @@ model PlannedMeal {
   carbs         Float
   fats          Float
   prepTime      Int
-  
+
   isCompleted   Boolean @default(false)
-  
+
   day           MealPlanDay @relation(fields: [mealPlanDayId], references: [id], onDelete: Cascade)
+}
+
+// Recipe Models - For AI-generated recipes that can be rated and commented
+model Recipe {
+  id            String   @id @default(cuid())
+
+  // Recipe Details
+  title         String
+  description   String?
+  imageUrl      String?
+  prepTime      Int      // minutes
+  cookTime      Int?     // minutes
+  servings      Int      @default(2)
+  difficulty    String   @default("medium") // easy, medium, hard
+
+  // Nutrition per serving
+  calories      Float
+  proteins      Float
+  carbs         Float
+  fats          Float
+  fiber         Float?
+
+  // Recipe Content (JSON strings)
+  ingredients   String   // JSON array of ingredients
+  instructions  String   // JSON array of steps
+  tags          String?  // JSON array of tags
+
+  // AI Generation metadata
+  generatedBy   String   @default("gemini") // gemini, openai, manual
+  promptContext String?  // What the user asked for
+
+  // Aggregated ratings (cached for performance)
+  averageRating Float    @default(0)
+  ratingsCount  Int      @default(0)
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  ratings       RecipeRating[]
+
+  @@index([averageRating])
+  @@index([createdAt])
+}
+
+model RecipeRating {
+  id        String   @id @default(cuid())
+  recipeId  String
+  userId    String
+
+  // Rating (1-5 stars)
+  rating    Int      // 1-5
+
+  // Optional comment
+  comment   String?
+
+  // Was this recipe cooked?
+  cooked    Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@unique([recipeId, userId]) // One rating per user per recipe
+  @@index([userId])
+}
+
+// Gamification Models
+model UserGamification {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+
+  // XP and Level
+  totalXp         Int      @default(0)
+  level           Int      @default(1)
+
+  // Streaks
+  currentStreak   Int      @default(0)
+  longestStreak   Int      @default(0)
+  lastActivityAt  DateTime?
+
+  // Stats
+  recipesRated    Int      @default(0)
+  recipesCooked   Int      @default(0)
+  mealsLogged     Int      @default(0)
+  weightLogsCount Int      @default(0)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  badges          UserBadge[]
+  xpHistory       XpTransaction[]
+}
+
+model UserBadge {
+  id               String   @id @default(cuid())
+  userGamificationId String
+
+  badgeType        String   // first_rating, streak_7, level_5, etc.
+  badgeName        String
+  badgeIcon        String?  // emoji or icon name
+  description      String?
+
+  earnedAt         DateTime @default(now())
+
+  userGamification UserGamification @relation(fields: [userGamificationId], references: [id], onDelete: Cascade)
+
+  @@unique([userGamificationId, badgeType])
+}
+
+model XpTransaction {
+  id               String   @id @default(cuid())
+  userGamificationId String
+
+  amount           Int      // XP earned (positive) or spent (negative)
+  reason           String   // rate_recipe, log_meal, streak_bonus, etc.
+  referenceId      String?  // ID of related entity (recipe, meal, etc.)
+  referenceType    String?  // recipe, meal, weight, etc.
+
+  createdAt        DateTime @default(now())
+
+  userGamification UserGamification @relation(fields: [userGamificationId], references: [id], onDelete: Cascade)
+
+  @@index([userGamificationId, createdAt])
 }
