@@ -56,19 +56,33 @@ export async function analyzeFoodPhoto(
             };
         }
 
-        // Remove data URL prefix if present
+        // Remove data URL prefix if present and extract mime type
+        const dataUrlMatch = imageBase64.match(/^data:(image\/\w+);base64,/);
+        const actualMimeType = dataUrlMatch ? dataUrlMatch[1] : mimeType;
         const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, '');
 
-        // Use Gemini Pro Vision for image analysis
-        const result = await models.pro.generateContent([
-            {
-                inlineData: {
-                    mimeType: mimeType,
-                    data: base64Data
-                }
-            },
-            { text: FOOD_PHOTO_ANALYSIS_PROMPT }
-        ]);
+        if (!base64Data || base64Data.length === 0) {
+            return {
+                success: false,
+                error: "Image invalide ou vide"
+            };
+        }
+
+        // Use Gemini for image analysis with correct Vertex AI format
+        const result = await models.pro.generateContent({
+            contents: [{
+                role: 'user',
+                parts: [
+                    {
+                        inlineData: {
+                            mimeType: actualMimeType,
+                            data: base64Data
+                        }
+                    },
+                    { text: FOOD_PHOTO_ANALYSIS_PROMPT }
+                ]
+            }]
+        });
 
         const response = result.response;
         const text = typeof response.text === 'function'
@@ -122,19 +136,33 @@ export async function quickAnalyzeFoodPhoto(
             };
         }
 
-        // Remove data URL prefix if present
+        // Remove data URL prefix if present and extract mime type
+        const dataUrlMatch = imageBase64.match(/^data:(image\/\w+);base64,/);
+        const actualMimeType = dataUrlMatch ? dataUrlMatch[1] : mimeType;
         const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, '');
 
-        // Use Gemini Flash for faster analysis
-        const result = await models.flash.generateContent([
-            {
-                inlineData: {
-                    mimeType: mimeType,
-                    data: base64Data
-                }
-            },
-            { text: QUICK_FOOD_ANALYSIS_PROMPT }
-        ]);
+        if (!base64Data || base64Data.length === 0) {
+            return {
+                success: false,
+                error: "Image invalide ou vide"
+            };
+        }
+
+        // Use Gemini Flash for faster analysis with correct Vertex AI format
+        const result = await models.flash.generateContent({
+            contents: [{
+                role: 'user',
+                parts: [
+                    {
+                        inlineData: {
+                            mimeType: actualMimeType,
+                            data: base64Data
+                        }
+                    },
+                    { text: QUICK_FOOD_ANALYSIS_PROMPT }
+                ]
+            }]
+        });
 
         const response = result.response;
         const text = typeof response.text === 'function'
