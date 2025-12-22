@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { useUserStore } from '@/store/user-store';
+import { useUserStore, useIsHydrated } from '@/store/user-store';
 import { motion } from 'framer-motion';
 import { Check, Zap, Crown, Users, ArrowRight, Loader2 } from 'lucide-react';
 
@@ -64,7 +64,8 @@ const plans = [
 export default function PlanSelectionPage() {
     const router = useRouter();
     const { data: session, status, update: updateSession } = useSession();
-    const { setSubscriptionPlan, setActiveMode, setUserId } = useUserStore();
+    const { setSubscriptionPlan, setActiveMode, setUserId, soloOnboardingCompleted, familyOnboardingCompleted, activeMode } = useUserStore();
+    const isHydrated = useIsHydrated();
     const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
 
@@ -74,6 +75,16 @@ export default function PlanSelectionPage() {
             router.push('/auth/login');
         }
     }, [status, router]);
+
+    // Rediriger vers la homepage si l'onboarding est déjà complété
+    useEffect(() => {
+        if (isHydrated && status === 'authenticated') {
+            // Si l'utilisateur a déjà complété l'onboarding, aller à la homepage
+            if (soloOnboardingCompleted || familyOnboardingCompleted) {
+                router.replace('/');
+            }
+        }
+    }, [isHydrated, status, soloOnboardingCompleted, familyOnboardingCompleted, router]);
 
     // Synchroniser l'ID utilisateur avec le store
     useEffect(() => {
@@ -108,8 +119,8 @@ export default function PlanSelectionPage() {
         }
     };
 
-    // Afficher un loader pendant la verification de la session
-    if (status === 'loading') {
+    // Afficher un loader pendant la verification de la session ou l'hydratation
+    if (status === 'loading' || !isHydrated) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 flex items-center justify-center">
                 <Loader2 className="w-8 h-8 animate-spin text-white" />
@@ -120,6 +131,15 @@ export default function PlanSelectionPage() {
     // Ne rien afficher si non authentifie (redirection en cours)
     if (status === 'unauthenticated') {
         return null;
+    }
+
+    // Ne rien afficher si redirection vers homepage (onboarding déjà complété)
+    if (soloOnboardingCompleted || familyOnboardingCompleted) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 flex items-center justify-center">
+                <Loader2 className="w-8 h-8 animate-spin text-white" />
+            </div>
+        );
     }
 
     return (
