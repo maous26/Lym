@@ -254,55 +254,52 @@ Réponds UNIQUEMENT avec un JSON valide avec cette structure exacte:
 }
 
 /**
- * Generate food image using Vertex AI Imagen 3.0
+ * Generate food image using OpenAI DALL-E 3
  */
 export async function generateFoodImage(description: string): Promise<{ success: boolean; image?: string; error?: string }> {
     try {
-        const projectId = process.env.GOOGLE_CLOUD_PROJECT;
-        const location = process.env.GOOGLE_CLOUD_LOCATION || 'us-central1';
+        const apiKey = process.env.OPENAI_API_KEY;
 
-        if (!projectId) {
-            return { success: false, error: "GOOGLE_CLOUD_PROJECT not configured" };
+        if (!apiKey) {
+            console.log('OpenAI API key not configured');
+            return { success: false, error: "OPENAI_API_KEY not configured" };
         }
-
-        const { v1, helpers } = await import('@google-cloud/aiplatform');
-
-        const clientOptions = {
-            apiEndpoint: `${location}-aiplatform.googleapis.com`,
-        };
-
-        const predictionServiceClient = new v1.PredictionServiceClient(clientOptions);
-        const endpoint = `projects/${projectId}/locations/${location}/publishers/google/models/imagen-3.0-generate-001`;
 
         const prompt = IMAGE_GENERATION_PROMPT_TEMPLATE(description);
-        const instanceValue = helpers.toValue({ prompt }) as any;
-        const parameterValue = helpers.toValue({
-            sampleCount: 1,
-            aspectRatio: "1:1",
-            safetyFilterLevel: "block_some",
-            personGeneration: "allow_adult",
-        }) as any;
+        console.log('Generating image with DALL-E 3:', prompt.substring(0, 100));
 
-        const result = await predictionServiceClient.predict({
-            endpoint,
-            instances: [instanceValue],
-            parameters: parameterValue,
-        } as any);
+        const response = await fetch('https://api.openai.com/v1/images/generations', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`,
+            },
+            body: JSON.stringify({
+                model: 'dall-e-3',
+                prompt: prompt,
+                n: 1,
+                size: '1024x1024',
+                quality: 'standard',
+                response_format: 'url',
+            }),
+        });
 
-        const response = result[0];
-        if (!response?.predictions || response.predictions.length === 0) {
-            throw new Error("No image generated");
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            console.error('DALL-E API error:', response.status, errorData);
+            return { success: false, error: `DALL-E error: ${response.status}` };
         }
 
-        const prediction = response.predictions[0];
-        const predictionValue = helpers.fromValue(prediction as any);
-        const base64Image = (predictionValue as any)?.bytesBase64Encoded;
+        const data = await response.json();
+        const imageUrl = data.data?.[0]?.url;
 
-        if (!base64Image) {
-            throw new Error("No image data in response");
+        if (!imageUrl) {
+            console.error('No image URL in response:', data);
+            return { success: false, error: "No image URL in response" };
         }
 
-        return { success: true, image: `data:image/png;base64,${base64Image}` };
+        console.log('Image generated successfully, URL length:', imageUrl.length);
+        return { success: true, image: imageUrl };
 
     } catch (error) {
         console.error("Error in generateFoodImage:", error);
