@@ -105,19 +105,6 @@ function MealCard({
             : `${config.bgLight} ${config.borderColor}`
       )}
     >
-      {/* Animated background gradient for logged meals */}
-      {isLogged && (
-        <motion.div
-          className={cn(
-            'absolute inset-0 opacity-10 bg-gradient-to-r',
-            config.gradient
-          )}
-          initial={{ x: '-100%' }}
-          animate={{ x: '100%' }}
-          transition={{ duration: 3, repeat: Infinity, repeatType: 'loop' }}
-        />
-      )}
-
       <div className="relative flex items-center gap-4">
         {/* Icon Container */}
         <motion.div
