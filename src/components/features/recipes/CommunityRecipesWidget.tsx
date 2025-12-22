@@ -20,7 +20,6 @@ interface CommunityRecipe {
     title: string;
     description: string | null;
     imageUrl: string | null;
-    thumbnailUrl: string | null;
     calories: number;
     prepTime: number;
     servings: number;
@@ -163,13 +162,11 @@ export function CommunityRecipesWidget({
                         >
                             {/* Image */}
                             <div
-                                className="h-36 bg-cover bg-center relative"
+                                className="h-36 bg-cover bg-center relative bg-gradient-to-br from-orange-100 to-rose-100"
                                 style={{
-                                    backgroundImage: `url(${
-                                        recipe.thumbnailUrl ||
-                                        recipe.imageUrl ||
-                                        'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400'
-                                    })`,
+                                    backgroundImage: recipe.imageUrl
+                                        ? `url(${recipe.imageUrl})`
+                                        : undefined,
                                 }}
                             >
                                 {/* Platform badge */}

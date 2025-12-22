@@ -6,6 +6,7 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { models, isAIAvailable } from '@/lib/ai/config';
 import { awardXp, incrementStat, updateStreak } from './gamification';
 import { XP_REWARDS } from '@/lib/gamification-utils';
+import { generateFoodImage } from './ai';
 
 // ============================================
 // TYPES
@@ -253,12 +254,25 @@ export async function submitVideoRecipe(videoUrl: string, manualDescription?: st
         // Extract recipe using AI
         const extractedRecipe = await extractRecipeFromTranscript(transcript, videoUrl);
 
+        // Generate AI image for the recipe (no YouTube thumbnail for copyright)
+        let generatedImageUrl: string | null = null;
+        try {
+            const imagePrompt = `${extractedRecipe.title}: ${extractedRecipe.description}`;
+            const imageResult = await generateFoodImage(imagePrompt);
+            if (imageResult.success && imageResult.image) {
+                generatedImageUrl = imageResult.image;
+            }
+        } catch (imageError) {
+            console.warn('Could not generate image for recipe:', imageError);
+            // Continue without image - not critical
+        }
+
         // Save to database
         const savedRecipe = await prisma.recipe.create({
             data: {
                 title: extractedRecipe.title,
                 description: extractedRecipe.description,
-                imageUrl: videoInfo.thumbnailUrl || null,
+                imageUrl: generatedImageUrl,
                 prepTime: extractedRecipe.prepTime,
                 cookTime: extractedRecipe.cookTime,
                 servings: extractedRecipe.servings,
@@ -275,7 +289,7 @@ export async function submitVideoRecipe(videoUrl: string, manualDescription?: st
                 generatedBy: 'gemini',
                 videoUrl: videoInfo.url,
                 videoId: videoInfo.videoId,
-                thumbnailUrl: videoInfo.thumbnailUrl,
+                thumbnailUrl: null, // No YouTube thumbnail for copyright reasons
                 videoPlatform: videoInfo.platform,
                 transcript: transcript.substring(0, 10000), // Limit storage
                 authorId: session.user.id,

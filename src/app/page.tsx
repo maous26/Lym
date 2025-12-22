@@ -359,7 +359,7 @@ export default function HomePage() {
           <CommunityRecipesWidget
             onRate={handleOpenRatingModal}
             onAddToPlan={handleAddRecipeToPlan}
-            onSeeAll={() => router.push('/recipes?tab=community')}
+            onSeeAll={() => router.push('/meals?tab=recipes')}
           />
         </section>
 
