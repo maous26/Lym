@@ -139,10 +139,7 @@ function MealCard({
             <img
               src={config.placeholderImage}
               alt={config.label}
-              className={cn(
-                'w-full h-full object-cover',
-                isEmpty && 'opacity-50 grayscale'
-              )}
+              className="w-full h-full object-cover"
             />
           )}
         </motion.div>
