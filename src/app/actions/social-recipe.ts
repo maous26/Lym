@@ -103,10 +103,151 @@ function parseVideoUrl(url: string): VideoInfo | null {
 // TRANSCRIPT EXTRACTION
 // ============================================
 
+interface YouTubeVideoInfo {
+    title: string;
+    description: string;
+    transcript: string | null;
+}
+
+interface RapidAPITranscriptSegment {
+    text: string;
+    start: number;
+    duration: number;
+}
+
+/**
+ * Get YouTube transcript via RapidAPI (most reliable method)
+ * Uses: https://rapidapi.com/8v2FWW4H6AmKw89/api/youtube-transcripts
+ */
+async function getYouTubeTranscriptViaRapidAPI(videoId: string): Promise<string | null> {
+    const apiKey = process.env.RAPIDAPI_KEY;
+
+    if (!apiKey) {
+        console.log('RapidAPI key not configured');
+        return null;
+    }
+
+    console.log('Fetching transcript via RapidAPI for video:', videoId);
+
+    try {
+        const url = `https://youtube-transcripts.p.rapidapi.com/youtube/transcript?videoId=${videoId}&chunkSize=500`;
+
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'X-RapidAPI-Key': apiKey,
+                'X-RapidAPI-Host': 'youtube-transcripts.p.rapidapi.com',
+            },
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.log('RapidAPI error:', response.status, errorText);
+            return null;
+        }
+
+        const data = await response.json();
+        console.log('RapidAPI response structure:', Object.keys(data));
+
+        // Handle different response formats
+        let transcript = '';
+
+        if (data.content && Array.isArray(data.content)) {
+            // Format: { content: [{ text: "...", start: 0, duration: 5 }, ...] }
+            transcript = data.content
+                .map((segment: RapidAPITranscriptSegment) => segment.text)
+                .join(' ');
+        } else if (data.transcript && typeof data.transcript === 'string') {
+            // Format: { transcript: "full text..." }
+            transcript = data.transcript;
+        } else if (Array.isArray(data)) {
+            // Format: [{ text: "...", start: 0, duration: 5 }, ...]
+            transcript = data
+                .map((segment: RapidAPITranscriptSegment) => segment.text)
+                .join(' ');
+        } else if (data.text) {
+            // Format: { text: "full text..." }
+            transcript = data.text;
+        }
+
+        if (transcript && transcript.length > 50) {
+            console.log('Got transcript via RapidAPI:', transcript.length, 'chars');
+            console.log('Preview:', transcript.substring(0, 300));
+            return transcript;
+        }
+
+        console.log('RapidAPI returned empty or short transcript');
+        return null;
+    } catch (error) {
+        console.error('RapidAPI fetch error:', error);
+        return null;
+    }
+}
+
+async function getYouTubeVideoInfo(videoId: string): Promise<YouTubeVideoInfo | null> {
+    console.log('Fetching video info for:', videoId);
+
+    try {
+        const { Innertube } = await import('youtubei.js');
+
+        const youtube = await Innertube.create({
+            lang: 'fr',
+            location: 'FR',
+        });
+
+        const info = await youtube.getInfo(videoId);
+
+        const title = info.basic_info?.title || '';
+        const description = info.basic_info?.short_description || '';
+
+        console.log('Got video title:', title);
+        console.log('Description length:', description.length);
+
+        // Try to get transcript
+        let transcript: string | null = null;
+        try {
+            const transcriptData = await info.getTranscript();
+            if (transcriptData?.transcript?.content?.body?.initial_segments) {
+                const segments = transcriptData.transcript.content.body.initial_segments;
+                transcript = segments.map((s: any) => s.snippet?.text || '').join(' ');
+                console.log('Got transcript via youtubei.js:', transcript.length, 'chars');
+            }
+        } catch (transcriptError) {
+            console.log('Transcript not available via youtubei.js:', (transcriptError as Error).message);
+        }
+
+        return { title, description, transcript };
+    } catch (error) {
+        console.error('Error getting video info via youtubei.js:', error);
+        return null;
+    }
+}
+
 async function getYouTubeTranscript(videoId: string): Promise<string | null> {
     console.log('Fetching transcript for video:', videoId);
 
-    // Method 1: Try youtube-captions-scraper (more reliable for auto-generated)
+    // Method 0: Try RapidAPI first (most reliable - can access auto-generated captions)
+    try {
+        const rapidAPITranscript = await getYouTubeTranscriptViaRapidAPI(videoId);
+        if (rapidAPITranscript && rapidAPITranscript.length >= 50) {
+            return rapidAPITranscript;
+        }
+    } catch (e) {
+        console.log('RapidAPI failed:', (e as Error).message);
+    }
+
+    // Method 1: Try youtubei.js (works for some videos)
+    try {
+        const videoInfo = await getYouTubeVideoInfo(videoId);
+        if (videoInfo?.transcript && videoInfo.transcript.length >= 50) {
+            return videoInfo.transcript;
+        }
+        // If no transcript but we have description, we'll use that as fallback later
+    } catch (e) {
+        console.log('youtubei.js failed:', (e as Error).message);
+    }
+
+    // Method 3: Try youtube-captions-scraper
     try {
         const { getSubtitles } = await import('youtube-captions-scraper');
 
@@ -137,7 +278,7 @@ async function getYouTubeTranscript(videoId: string): Promise<string | null> {
         console.log('youtube-captions-scraper failed:', (scraperError as Error).message);
     }
 
-    // Method 2: Fallback to youtube-transcript
+    // Method 4: Fallback to youtube-transcript
     try {
         const { YoutubeTranscript } = await import('youtube-transcript');
 
@@ -165,51 +306,92 @@ async function getYouTubeTranscript(videoId: string): Promise<string | null> {
         console.log('youtube-transcript failed:', (ytError as Error).message);
     }
 
-    // Method 3: Try to fetch directly from YouTube page (scraping)
+    // Method 5: Try to fetch directly from YouTube page (scraping)
     try {
         console.log('Trying direct YouTube page scrape...');
         const response = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                 'Accept-Language': 'fr-FR,fr;q=0.9,en;q=0.8',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
             },
         });
 
         const html = await response.text();
+        console.log('Fetched YouTube page, length:', html.length);
 
-        // Try to extract captions URL from the page
-        const captionsMatch = html.match(/"captionTracks":\s*\[(.*?)\]/);
+        // Try to extract captions URL from the page - improved regex
+        // The format is "captionTracks":[{...}] with escaped URLs
+        const captionsMatch = html.match(/"captionTracks":\s*(\[[\s\S]*?\])\s*,\s*"/);
         if (captionsMatch) {
             console.log('Found caption tracks in page');
-            const captionsData = JSON.parse(`[${captionsMatch[1]}]`);
+            try {
+                // Parse the JSON, handling escaped characters
+                const captionsJson = captionsMatch[1]
+                    .replace(/\\u0026/g, '&')
+                    .replace(/\\"/g, '"');
+                const captionsData = JSON.parse(captionsJson);
+                console.log('Parsed captions data, found', captionsData.length, 'tracks');
 
-            // Find French or auto-generated captions
-            const frCaptions = captionsData.find((c: any) =>
-                c.languageCode === 'fr' || c.vssId?.includes('.fr') || c.kind === 'asr'
-            );
+                // Find French or auto-generated captions
+                const frCaptions = captionsData.find((c: any) =>
+                    c.languageCode === 'fr' || c.vssId?.includes('.fr') || c.kind === 'asr'
+                );
 
-            if (frCaptions?.baseUrl) {
-                console.log('Fetching captions from:', frCaptions.baseUrl.substring(0, 100));
-                const captionsResponse = await fetch(frCaptions.baseUrl);
-                const captionsXml = await captionsResponse.text();
+                if (frCaptions?.baseUrl) {
+                    // Unescape the URL
+                    const captionUrl = frCaptions.baseUrl.replace(/\\u0026/g, '&');
+                    console.log('Fetching captions from URL...');
 
-                // Parse XML to extract text
-                const textMatches = captionsXml.match(/<text[^>]*>([^<]*)<\/text>/g);
-                if (textMatches) {
-                    const fullText = textMatches
-                        .map((t: string) => {
-                            const match = t.match(/<text[^>]*>([^<]*)<\/text>/);
-                            return match ? match[1].replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"') : '';
-                        })
-                        .join(' ');
+                    const captionsResponse = await fetch(captionUrl, {
+                        headers: {
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                        },
+                    });
+                    const captionsXml = await captionsResponse.text();
+                    console.log('Got captions XML, length:', captionsXml.length);
 
-                    console.log('Got transcript via direct scrape:', fullText.length, 'chars');
-                    console.log('Preview:', fullText.substring(0, 300));
+                    // Parse XML to extract text - handle both formats
+                    const textMatches = captionsXml.match(/<text[^>]*>([^<]*)<\/text>/g);
+                    if (textMatches && textMatches.length > 0) {
+                        const fullText = textMatches
+                            .map((t: string) => {
+                                const match = t.match(/<text[^>]*>([^<]*)<\/text>/);
+                                if (!match) return '';
+                                return match[1]
+                                    .replace(/&amp;/g, '&')
+                                    .replace(/&#39;/g, "'")
+                                    .replace(/&quot;/g, '"')
+                                    .replace(/&lt;/g, '<')
+                                    .replace(/&gt;/g, '>')
+                                    .replace(/\n/g, ' ');
+                            })
+                            .join(' ')
+                            .replace(/\s+/g, ' ')
+                            .trim();
 
-                    if (fullText.length >= 50) {
-                        return fullText;
+                        console.log('Got transcript via direct scrape:', fullText.length, 'chars');
+                        console.log('Preview:', fullText.substring(0, 300));
+
+                        if (fullText.length >= 50) {
+                            return fullText;
+                        }
+                    } else {
+                        console.log('No text matches found in captions XML');
+                        console.log('XML preview:', captionsXml.substring(0, 500));
                     }
+                } else {
+                    console.log('No French/ASR captions found in tracks');
                 }
+            } catch (parseError) {
+                console.log('Error parsing captions JSON:', (parseError as Error).message);
+            }
+        } else {
+            console.log('No captionTracks found in page');
+            // Try alternative pattern
+            const altMatch = html.match(/captionTracks.*?baseUrl.*?"([^"]+)"/);
+            if (altMatch) {
+                console.log('Found alternative caption URL pattern');
             }
         }
     } catch (scrapeError) {
@@ -367,16 +549,44 @@ export async function extractVideoRecipe(videoUrl: string, manualDescription?: s
             return { success: false, error: 'Cette vidéo a déjà été soumise !' };
         }
 
-        // Get transcript based on platform
+        // Get transcript and video info based on platform
         let transcript: string | null = null;
+        let videoTitle: string | null = null;
+        let videoDescription: string | null = null;
 
         if (videoInfo.platform === 'youtube') {
-            transcript = await getYouTubeTranscript(videoInfo.videoId);
+            // First, try to get full video info including description
+            const ytInfo = await getYouTubeVideoInfo(videoInfo.videoId);
+            if (ytInfo) {
+                videoTitle = ytInfo.title;
+                videoDescription = ytInfo.description;
+                transcript = ytInfo.transcript;
+                console.log('Got YouTube info - Title:', videoTitle);
+                console.log('Has transcript:', !!transcript);
+                console.log('Description length:', videoDescription?.length || 0);
+            }
+
+            // If no transcript from youtubei.js, try other methods
+            if (!transcript || transcript.length < 50) {
+                transcript = await getYouTubeTranscript(videoInfo.videoId);
+            }
+
+            // If still no transcript, use video description as fallback
+            if ((!transcript || transcript.length < 50) && videoDescription && videoDescription.length > 100) {
+                console.log('Using video description as transcript fallback');
+                // Combine title and description for better context
+                transcript = `Titre de la vidéo: ${videoTitle}\n\nDescription:\n${videoDescription}`;
+            }
         }
 
-        // Use manual description if provided or if transcript not available
+        // Use manual description if provided (takes priority)
         if (manualDescription && manualDescription.trim().length > 0) {
-            transcript = manualDescription;
+            // If we have a video title, prepend it
+            if (videoTitle) {
+                transcript = `Titre de la vidéo: ${videoTitle}\n\nDescription fournie:\n${manualDescription}`;
+            } else {
+                transcript = manualDescription;
+            }
         }
 
         // If no transcript available, ask for manual description
@@ -384,7 +594,6 @@ export async function extractVideoRecipe(videoUrl: string, manualDescription?: s
             return {
                 success: false,
                 error: 'NEED_DESCRIPTION', // Special code to trigger description field
-                // Cleaner message for display
             };
         }
 
