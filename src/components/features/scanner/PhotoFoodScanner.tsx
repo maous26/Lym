@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Camera,
@@ -65,50 +65,36 @@ export function PhotoFoodScanner({ onFoodDetected, mealType }: PhotoFoodScannerP
                 });
             }
 
-            if (videoRef.current && stream) {
-                const video = videoRef.current;
-
-                // Set attributes BEFORE setting srcObject for iOS
-                video.setAttribute('autoplay', 'true');
-                video.setAttribute('playsinline', 'true');
-                video.setAttribute('webkit-playsinline', 'true');
-                video.setAttribute('muted', 'true');
-                video.muted = true;
-
-                video.srcObject = stream;
-
-                // Wait for video to be ready
-                await new Promise<void>((resolve) => {
-                    const onCanPlay = () => {
-                        video.removeEventListener('canplay', onCanPlay);
-                        resolve();
-                    };
-
-                    if (video.readyState >= 3) {
-                        resolve();
-                    } else {
-                        video.addEventListener('canplay', onCanPlay);
-                        // Timeout fallback
-                        setTimeout(resolve, 3000);
-                    }
-                });
-
-                // Try to play - required for iOS
-                try {
-                    await video.play();
-                } catch (playError) {
-                    console.log('Autoplay failed, video should still work:', playError);
-                }
-            }
-
+            // Store stream and change state FIRST so video element renders
             setCameraStream(stream);
             setState('camera');
+
         } catch (err) {
             console.error('Camera access denied:', err);
             setError("Impossible d'accéder à la caméra. Vérifiez les permissions dans Réglages > Safari > Caméra.");
             setState('error');
         }
     }, []);
+
+    // Attach stream to video element when both are available
+    useEffect(() => {
+        if (cameraStream && videoRef.current && state === 'camera') {
+            const video = videoRef.current;
+
+            // Set attributes for iOS
+            video.setAttribute('autoplay', 'true');
+            video.setAttribute('playsinline', 'true');
+            video.setAttribute('webkit-playsinline', 'true');
+            video.muted = true;
+
+            video.srcObject = cameraStream;
+
+            // Play video
+            video.play().catch(err => {
+                console.log('Video play error:', err);
+            });
+        }
+    }, [cameraStream, state]);
 
     // Stop camera
     const stopCamera = useCallback(() => {
