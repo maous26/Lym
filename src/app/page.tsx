@@ -11,11 +11,12 @@ import {
   NutritionRingWidget,
   TodayMealsWidget,
   CoachInsightWidget,
-  WeekOverviewWidget,
   RecipeSuggestionWidget,
   HydrationWidget,
   WeeklyPlanWidget,
 } from '@/components/features/dashboard/widgets';
+import { ProgressCollapsibleWidget } from '@/components/features/progress';
+import { useMealStore } from '@/store/meal-store';
 import { WeightTracker, WeightTrackerRef } from '@/components/features/weight/WeightTracker';
 import { ConnectedDevices } from '@/components/features/weight/ConnectedDevices';
 import { SubmitRecipeWidget } from '@/components/features/recipes';
@@ -23,14 +24,6 @@ import { XpToast } from '@/components/features/gamification';
 import { ChevronDown, ChevronUp, Scale, Bluetooth } from 'lucide-react';
 
 // Types for widget data
-interface WeekDay {
-  label: string;
-  shortLabel: string;
-  date: string;
-  calories: number;
-  goal: number;
-}
-
 interface Recipe {
   id: string;
   name: string;
@@ -49,6 +42,7 @@ export default function HomePage() {
   const soloProfile = useSoloProfile();
   const activeMode = useActiveMode();
   const todayMeals = useTodayMeals();
+  const { meals } = useMealStore();
 
   // Ref for WeightTracker to refresh after sync
   const weightTrackerRef = useRef<WeightTrackerRef>(null);
@@ -83,39 +77,6 @@ export default function HomePage() {
     if (hour < 18) return 'Bon après-midi';
     return 'Bonsoir';
   };
-
-  // Objectif calories du profil
-  const calorieGoal = soloProfile?.dailyCaloriesTarget || 2000;
-
-  // Generate current week data with real dates
-  const getWeekData = (): WeekDay[] => {
-    const today = new Date();
-    const dayOfWeek = today.getDay();
-    const monday = new Date(today);
-    monday.setDate(today.getDate() - ((dayOfWeek + 6) % 7));
-
-    const dayLabels = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
-    const shortLabels = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
-
-    return dayLabels.map((label, index) => {
-      const date = new Date(monday);
-      date.setDate(monday.getDate() + index);
-      const isToday = date.toDateString() === today.toDateString();
-      const isFuture = date > today;
-
-      // Pour aujourd'hui, utiliser les calories réelles des repas
-      // Pour les jours passés et futurs, afficher 0 (pas de données)
-      return {
-        label,
-        shortLabel: shortLabels[index],
-        date: date.toISOString().split('T')[0],
-        calories: isToday ? (todayMeals?.totalNutrition?.calories || 0) : 0,
-        goal: calorieGoal,
-      };
-    });
-  };
-
-  const weekData = getWeekData();
 
   const suggestedRecipes: Recipe[] = [
     {
@@ -366,12 +327,21 @@ export default function HomePage() {
           />
         </section>
 
-        {/* Week Overview */}
+        {/* Progress Widget - Collapsible */}
         <section className="mt-6">
-          <WeekOverviewWidget
-            days={weekData}
-            averageCalories={todayMeals?.totalNutrition?.calories || 0}
-            onDayClick={(date) => router.push(`/nutrition?date=${date}`)}
+          <ProgressCollapsibleWidget
+            meals={meals}
+            targets={{
+              calories: targetCalories,
+              proteins: targetProteins,
+              carbs: targetCarbs,
+              fats: targetFats,
+            }}
+            weightProgress={
+              soloProfile?.weight && soloProfile?.targetWeight
+                ? Math.abs(soloProfile.weight - soloProfile.targetWeight)
+                : 0
+            }
           />
         </section>
 
