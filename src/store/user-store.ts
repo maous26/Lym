@@ -7,6 +7,7 @@ import type {
   NutritionalNeeds,
 } from '@/types/user';
 import type { Family, FamilyMember } from '@/types/family';
+import { saveUserProfile, loadUserProfile, type UserProfileData } from '@/app/actions/sync';
 
 // User store state
 interface UserState {
@@ -66,6 +67,10 @@ interface UserActions {
   setLoading: (isLoading: boolean) => void;
   setHydrated: (isHydrated: boolean) => void;
 
+  // Database sync
+  syncFromDatabase: () => Promise<void>;
+  syncToDatabase: () => Promise<void>;
+
   // Reset
   reset: () => void;
 }
@@ -103,22 +108,35 @@ export const useUserStore = create<UserState & UserActions>()(
       setSubscriptionPlan: (plan) => set({ subscriptionPlan: plan }),
 
       // Solo actions
-      setSoloProfile: (profile) =>
-        set({ soloProfile: { ...get().soloProfile, ...profile } as UserProfile }),
-      updateSoloProfile: (updates) =>
+      setSoloProfile: (profile) => {
+        set({ soloProfile: { ...get().soloProfile, ...profile } as UserProfile });
+        // Sync to database after update
+        setTimeout(() => get().syncToDatabase(), 100);
+      },
+      updateSoloProfile: (updates) => {
         set((state) => ({
           soloProfile: state.soloProfile
             ? { ...state.soloProfile, ...updates }
             : (updates as UserProfile),
-        })),
-      setSoloNutritionalNeeds: (needs) => set({ soloNutritionalNeeds: needs }),
-      completeSoloOnboarding: () =>
+        }));
+        // Sync to database after update
+        setTimeout(() => get().syncToDatabase(), 100);
+      },
+      setSoloNutritionalNeeds: (needs) => {
+        set({ soloNutritionalNeeds: needs });
+        // Sync to database after update
+        setTimeout(() => get().syncToDatabase(), 100);
+      },
+      completeSoloOnboarding: () => {
         set((state) => ({
           soloOnboardingCompleted: true,
           soloProfile: state.soloProfile
             ? { ...state.soloProfile, onboardingCompleted: true }
             : null,
-        })),
+        }));
+        // Sync to database after completing onboarding
+        setTimeout(() => get().syncToDatabase(), 100);
+      },
       resetSoloOnboarding: () =>
         set({
           soloProfile: null,
@@ -156,6 +174,112 @@ export const useUserStore = create<UserState & UserActions>()(
       // UI actions
       setLoading: (isLoading) => set({ isLoading }),
       setHydrated: (isHydrated) => set({ isHydrated }),
+
+      // Database sync
+      syncFromDatabase: async () => {
+        set({ isLoading: true });
+        try {
+          const result = await loadUserProfile();
+          if (result.success && result.profile) {
+            const profile = result.profile;
+
+            // Convert DB profile to local profile format
+            const localProfile: Partial<UserProfile> = {
+              firstName: profile.firstName || undefined,
+              lastName: profile.lastName || undefined,
+              birthDate: profile.birthDate || undefined,
+              gender: profile.gender as 'male' | 'female' | 'other' | undefined,
+              height: profile.height || undefined,
+              weight: profile.weight || undefined,
+              targetWeight: profile.targetWeight || undefined,
+              activityLevel: profile.activityLevel as UserProfile['activityLevel'],
+              goal: profile.goal as UserProfile['goal'],
+              dietType: profile.dietType as UserProfile['dietType'],
+              allergies: profile.allergies || [],
+              intolerances: profile.intolerances || [],
+              dislikedFoods: profile.dislikedFoods || [],
+              likedFoods: profile.likedFoods || [],
+              cookingSkillLevel: profile.cookingSkillLevel as UserProfile['cookingSkillLevel'],
+              cookingTimeWeekday: profile.cookingTimeWeekday || undefined,
+              cookingTimeWeekend: profile.cookingTimeWeekend || undefined,
+              weeklyBudget: profile.weeklyBudget || undefined,
+              onboardingCompleted: profile.onboardingCompleted,
+            };
+
+            // Calculate nutritional needs from DB values with default micronutrients
+            const nutritionalNeeds: NutritionalNeeds | null = profile.dailyCaloriesTarget ? {
+              calories: profile.dailyCaloriesTarget,
+              proteins: profile.proteinTarget || 0,
+              carbs: profile.carbsTarget || 0,
+              fats: profile.fatTarget || 0,
+              fiber: 25,
+              water: 2,
+              calcium: 1000,
+              iron: 14,
+              vitaminD: 600,
+              vitaminC: 90,
+              vitaminB12: 2.4,
+              zinc: 11,
+              magnesium: 400,
+              potassium: 3500,
+              omega3: 1.6,
+            } : null;
+
+            set({
+              soloProfile: localProfile as UserProfile,
+              soloOnboardingCompleted: profile.onboardingCompleted || false,
+              soloNutritionalNeeds: nutritionalNeeds,
+              subscriptionPlan: (profile.subscriptionPlan as SubscriptionPlan) || 'free',
+            });
+          }
+        } catch (error) {
+          console.error('Error syncing user profile from database:', error);
+        } finally {
+          set({ isLoading: false });
+        }
+      },
+
+      syncToDatabase: async () => {
+        const state = get();
+        if (!state.soloProfile) return;
+
+        const profile = state.soloProfile;
+        const needs = state.soloNutritionalNeeds;
+
+        const dbProfile: UserProfileData = {
+          firstName: profile.firstName,
+          lastName: profile.lastName,
+          birthDate: profile.birthDate,
+          gender: profile.gender,
+          height: profile.height,
+          weight: profile.weight,
+          targetWeight: profile.targetWeight,
+          activityLevel: profile.activityLevel,
+          goal: profile.goal,
+          dailyCaloriesTarget: needs?.calories,
+          proteinTarget: needs?.proteins,
+          carbsTarget: needs?.carbs,
+          fatTarget: needs?.fats,
+          dietType: profile.dietType,
+          allergies: profile.allergies,
+          intolerances: profile.intolerances,
+          dislikedFoods: profile.dislikedFoods,
+          likedFoods: profile.likedFoods,
+          cookingSkillLevel: profile.cookingSkillLevel,
+          cookingTimeWeekday: profile.cookingTimeWeekday,
+          cookingTimeWeekend: profile.cookingTimeWeekend,
+          weeklyBudget: profile.weeklyBudget,
+          fastingSchedule: profile.fastingSchedule,
+          onboardingCompleted: state.soloOnboardingCompleted,
+          subscriptionPlan: state.subscriptionPlan,
+        };
+
+        try {
+          await saveUserProfile(dbProfile);
+        } catch (error) {
+          console.error('Error syncing user profile to database:', error);
+        }
+      },
 
       // Reset
       reset: () => set({ ...initialState, isHydrated: true }),

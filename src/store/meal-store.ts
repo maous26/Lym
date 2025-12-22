@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import type {
   Meal,
   MealType,
+  MealSource,
   DailyMeals,
   DailyNutrition,
   NutritionInfo,
@@ -10,6 +11,7 @@ import type {
   MealItem,
   MealPlan,
 } from '@/types/meal';
+import { saveMeal, deleteMeal as deleteMealFromDb, loadAllMeals, type MealData } from '@/app/actions/sync';
 
 // Get today's date in YYYY-MM-DD format
 const getTodayDate = () => new Date().toISOString().split('T')[0];
@@ -47,6 +49,10 @@ interface MealActions {
   addMeal: (meal: Meal) => void;
   updateMeal: (mealId: string, updates: Partial<Meal>) => void;
   deleteMeal: (date: string, mealType: MealType) => void;
+
+  // Database sync
+  syncFromDatabase: () => Promise<void>;
+  setMealsFromDb: (meals: MealData[]) => void;
 
   // Add meal flow
   startAddMeal: (type: MealType) => void;
@@ -133,8 +139,105 @@ export const useMealStore = create<MealState & MealActions>()(
         set({ selectedDate: current.toISOString().split('T')[0] });
       },
 
+      // Database sync
+      syncFromDatabase: async () => {
+        set({ isLoading: true });
+        try {
+          const result = await loadAllMeals();
+          if (result.success && 'meals' in result && result.meals) {
+            get().setMealsFromDb(result.meals);
+          }
+        } catch (error) {
+          console.error('Error syncing meals from database:', error);
+        } finally {
+          set({ isLoading: false });
+        }
+      },
+
+      setMealsFromDb: (dbMeals) => {
+        const mealsMap: Record<string, DailyMeals> = {};
+
+        for (const meal of dbMeals) {
+          const dateKey = meal.date;
+          if (!mealsMap[dateKey]) {
+            mealsMap[dateKey] = {
+              date: dateKey,
+              totalNutrition: { calories: 0, proteins: 0, carbs: 0, fats: 0 },
+              caloriesGoal: 2000,
+              proteinsGoal: 150,
+              carbsGoal: 250,
+              fatsGoal: 65,
+            };
+          }
+
+          // Convert DB meal to local Meal format
+          const localMeal: Meal = {
+            id: meal.id,
+            type: meal.type as MealType,
+            date: meal.date,
+            time: meal.time || new Date().toTimeString().slice(0, 5),
+            items: meal.items.map((item) => ({
+              id: item.id,
+              quantity: item.quantity,
+              food: {
+                id: item.foodId || item.id,
+                name: item.name,
+                serving: 1,
+                servingUnit: item.unit,
+                nutrition: {
+                  calories: item.calories / item.quantity,
+                  proteins: item.proteins / item.quantity,
+                  carbs: item.carbs / item.quantity,
+                  fats: item.fats / item.quantity,
+                },
+                source: 'manual' as const,
+              },
+            })),
+            totalNutrition: {
+              calories: meal.calories,
+              proteins: meal.proteins,
+              carbs: meal.carbs,
+              fats: meal.fats,
+              fiber: meal.fiber,
+              sugar: meal.sugar,
+              sodium: meal.sodium,
+            },
+            source: (meal.source === 'plan' ? 'recipe' : meal.source) as MealSource,
+            isPlanned: meal.isPlanned,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+
+          mealsMap[dateKey][meal.type as MealType] = localMeal;
+        }
+
+        // Recalculate total nutrition for each day
+        for (const dateKey of Object.keys(mealsMap)) {
+          const dayMeals = mealsMap[dateKey];
+          const allMeals = [
+            dayMeals.breakfast,
+            dayMeals.lunch,
+            dayMeals.snack,
+            dayMeals.dinner,
+          ].filter(Boolean) as Meal[];
+
+          dayMeals.totalNutrition = allMeals.reduce(
+            (total, m) => ({
+              calories: total.calories + m.totalNutrition.calories,
+              proteins: total.proteins + m.totalNutrition.proteins,
+              carbs: total.carbs + m.totalNutrition.carbs,
+              fats: total.fats + m.totalNutrition.fats,
+            }),
+            { calories: 0, proteins: 0, carbs: 0, fats: 0 }
+          );
+        }
+
+        set({ meals: mealsMap });
+      },
+
       // Meals CRUD
-      addMeal: (meal) =>
+      addMeal: (meal) => {
+        // Update local state
         set((state) => {
           const dateKey = meal.date;
           const existing = state.meals[dateKey] || {
@@ -175,7 +278,38 @@ export const useMealStore = create<MealState & MealActions>()(
               [dateKey]: updated,
             },
           };
-        }),
+        });
+
+        // Sync to database (async, non-blocking)
+        const dbMeal: MealData = {
+          id: meal.id,
+          type: meal.type,
+          date: meal.date,
+          time: meal.time,
+          calories: meal.totalNutrition.calories,
+          proteins: meal.totalNutrition.proteins,
+          carbs: meal.totalNutrition.carbs,
+          fats: meal.totalNutrition.fats,
+          fiber: meal.totalNutrition.fiber,
+          sugar: meal.totalNutrition.sugar,
+          sodium: meal.totalNutrition.sodium,
+          source: meal.source || 'manual',
+          isPlanned: meal.isPlanned,
+          items: meal.items.map((item) => ({
+            id: item.id,
+            name: item.food.name,
+            quantity: item.quantity,
+            unit: item.food.servingUnit || 'g',
+            calories: item.food.nutrition.calories * item.quantity,
+            proteins: item.food.nutrition.proteins * item.quantity,
+            carbs: item.food.nutrition.carbs * item.quantity,
+            fats: item.food.nutrition.fats * item.quantity,
+            foodId: item.food.id,
+          })),
+        };
+
+        saveMeal(dbMeal).catch((err) => console.error('Error saving meal to database:', err));
+      },
 
       updateMeal: (mealId, updates) =>
         set((state) => {
@@ -196,7 +330,8 @@ export const useMealStore = create<MealState & MealActions>()(
           return state;
         }),
 
-      deleteMeal: (date, mealType) =>
+      deleteMeal: (date, mealType) => {
+        // Update local state
         set((state) => {
           const dailyMeals = state.meals[date];
           if (!dailyMeals) return state;
@@ -210,7 +345,13 @@ export const useMealStore = create<MealState & MealActions>()(
               [date]: updated,
             },
           };
-        }),
+        });
+
+        // Sync deletion to database
+        deleteMealFromDb(date, mealType).catch((err) =>
+          console.error('Error deleting meal from database:', err)
+        );
+      },
 
       // Add meal flow
       startAddMeal: (type) =>
