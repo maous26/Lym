@@ -338,7 +338,7 @@ function MealsPageContent() {
               )}
             >
               <Users className="w-4 h-4" />
-              Recettes
+              Vos recettes
             </button>
           </div>
         </div>
@@ -691,7 +691,8 @@ function MealsPageContent() {
                     key={recipe.id}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-white rounded-2xl overflow-hidden shadow-sm"
+                    className="bg-white rounded-2xl overflow-hidden shadow-sm cursor-pointer active:scale-[0.98] transition-transform"
+                    onClick={() => router.push(`/recipes/${recipe.id}`)}
                   >
                     <div className="flex">
                       {/* Image */}
@@ -738,7 +739,7 @@ function MealsPageContent() {
                         </div>
 
                         {/* Actions */}
-                        <div className="flex gap-2 mt-2">
+                        <div className="flex gap-2 mt-2" onClick={(e) => e.stopPropagation()}>
                           <button
                             onClick={() => setRatingModal({ isOpen: true, recipeId: recipe.id, title: recipe.title })}
                             className="flex-1 py-1.5 text-xs font-medium text-stone-600 bg-stone-100 rounded-lg hover:bg-stone-200 transition-colors flex items-center justify-center gap-1"
