@@ -144,7 +144,15 @@ ${transcript.substring(0, 15000)}
 URL source: ${videoUrl}
 
 INSTRUCTIONS:
-1. Identifie le titre de la recette
+1. TITRE DE LA RECETTE (TRÈS IMPORTANT):
+   - Si le titre est mentionné explicitement dans le transcript, utilise-le
+   - SINON, CRÉE un titre descriptif et appétissant basé sur:
+     * L'ingrédient principal (viande, poisson, légume, etc.)
+     * La méthode de cuisson (grillé, mijoté, rôti, etc.)
+     * L'origine ou le style si évident (à l'italienne, façon asiatique, etc.)
+   - Exemples de bons titres: "Poulet rôti aux herbes de Provence", "Curry de légumes crémeux", "Saumon grillé sauce citronnée"
+   - NE JAMAIS utiliser "Recette inconnue" ou des titres génériques
+
 2. Liste TOUS les ingrédients avec leurs quantités PRÉCISES (convertis en grammes/ml si possible)
 3. Rédige les instructions étape par étape de façon claire
 4. CALCULE les valeurs nutritionnelles basées sur les quantités d'ingrédients:
@@ -203,7 +211,164 @@ RÉPONDS UNIQUEMENT avec ce JSON valide:
 // ============================================
 
 /**
- * Submit a video URL and extract the recipe
+ * Extract recipe from video URL WITHOUT saving (preview step)
+ */
+export async function extractVideoRecipe(videoUrl: string, manualDescription?: string): Promise<{
+    success: boolean;
+    extractedRecipe?: ExtractedRecipe & { videoInfo: VideoInfo };
+    error?: string;
+}> {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+        return { success: false, error: 'Non authentifié' };
+    }
+
+    try {
+        // Parse and validate URL
+        const videoInfo = parseVideoUrl(videoUrl);
+        if (!videoInfo) {
+            return { success: false, error: 'URL non valide. Formats supportés: YouTube, Instagram Reels, TikTok' };
+        }
+
+        // Check if recipe from this video already exists
+        const existingRecipe = await prisma.recipe.findFirst({
+            where: {
+                videoId: videoInfo.videoId,
+                videoPlatform: videoInfo.platform,
+            },
+        });
+
+        if (existingRecipe) {
+            return { success: false, error: 'Cette vidéo a déjà été soumise !' };
+        }
+
+        // Get transcript based on platform
+        let transcript: string;
+
+        if (videoInfo.platform === 'youtube') {
+            transcript = await getYouTubeTranscript(videoInfo.videoId);
+        } else if (manualDescription) {
+            transcript = manualDescription;
+        } else {
+            return {
+                success: false,
+                error: 'Pour Instagram/TikTok, veuillez ajouter une description de la recette.'
+            };
+        }
+
+        // Extract recipe using AI (without saving)
+        const extractedRecipe = await extractRecipeFromTranscript(transcript, videoUrl);
+
+        return {
+            success: true,
+            extractedRecipe: {
+                ...extractedRecipe,
+                videoInfo,
+            },
+        };
+    } catch (error) {
+        console.error('Error extracting video recipe:', error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Erreur lors de l\'extraction de la recette'
+        };
+    }
+}
+
+/**
+ * Save a validated/edited recipe
+ */
+export async function saveValidatedRecipe(
+    recipeData: ExtractedRecipe,
+    videoInfo: { platform: VideoPlatform; videoId: string; url: string }
+): Promise<{
+    success: boolean;
+    recipe?: any;
+    recipeId?: string;
+    xpEarned?: number;
+    error?: string;
+}> {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+        return { success: false, error: 'Non authentifié' };
+    }
+
+    try {
+        // Generate AI image for the recipe
+        let generatedImageUrl: string | null = null;
+        try {
+            const imagePrompt = `${recipeData.title}: ${recipeData.description}`;
+            const imageResult = await generateFoodImage(imagePrompt);
+            if (imageResult.success && imageResult.image) {
+                generatedImageUrl = imageResult.image;
+            }
+        } catch (imageError) {
+            console.warn('Could not generate image for recipe:', imageError);
+        }
+
+        // Save to database
+        const savedRecipe = await prisma.recipe.create({
+            data: {
+                title: recipeData.title,
+                description: recipeData.description,
+                imageUrl: generatedImageUrl,
+                prepTime: recipeData.prepTime,
+                cookTime: recipeData.cookTime,
+                servings: recipeData.servings,
+                difficulty: recipeData.difficulty,
+                calories: recipeData.nutrition.calories,
+                proteins: recipeData.nutrition.proteins,
+                carbs: recipeData.nutrition.carbs,
+                fats: recipeData.nutrition.fats,
+                fiber: recipeData.nutrition.fiber,
+                ingredients: JSON.stringify(recipeData.ingredients),
+                instructions: JSON.stringify(recipeData.instructions),
+                tags: JSON.stringify(recipeData.tags),
+                source: videoInfo.platform,
+                generatedBy: 'gemini',
+                videoUrl: videoInfo.url,
+                videoId: videoInfo.videoId,
+                thumbnailUrl: null,
+                videoPlatform: videoInfo.platform,
+                authorId: session.user.id,
+                status: 'approved',
+            },
+        });
+
+        // Award XP for submission
+        const xpResult = await awardXp(
+            session.user.id,
+            XP_REWARDS.submit_video_recipe || 50,
+            'submit_video_recipe',
+            savedRecipe.id,
+            'recipe'
+        );
+
+        // Update streak
+        await updateStreak(session.user.id);
+
+        return {
+            success: true,
+            recipe: {
+                ...savedRecipe,
+                ingredients: recipeData.ingredients,
+                instructions: recipeData.instructions,
+                tags: recipeData.tags,
+            },
+            recipeId: savedRecipe.id,
+            xpEarned: xpResult.xpAwarded,
+        };
+    } catch (error) {
+        console.error('Error saving validated recipe:', error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Erreur lors de la sauvegarde'
+        };
+    }
+}
+
+/**
+ * Submit a video URL and extract the recipe (legacy - kept for compatibility)
  */
 export async function submitVideoRecipe(videoUrl: string, manualDescription?: string): Promise<{
     success: boolean;
