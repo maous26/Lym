@@ -104,26 +104,120 @@ function parseVideoUrl(url: string): VideoInfo | null {
 // ============================================
 
 async function getYouTubeTranscript(videoId: string): Promise<string | null> {
+    console.log('Fetching transcript for video:', videoId);
+
+    // Method 1: Try youtube-captions-scraper (more reliable for auto-generated)
+    try {
+        const { getSubtitles } = await import('youtube-captions-scraper');
+
+        // Try French first
+        const languages = ['fr', 'en', 'auto'];
+        for (const lang of languages) {
+            try {
+                console.log(`Trying youtube-captions-scraper with lang: ${lang}`);
+                const subtitles = await getSubtitles({
+                    videoID: videoId,
+                    lang: lang === 'auto' ? undefined : lang,
+                });
+
+                if (subtitles && subtitles.length > 0) {
+                    const fullText = subtitles.map((s: { text: string }) => s.text).join(' ');
+                    console.log(`Got transcript via captions-scraper (${lang}):`, fullText.length, 'chars');
+                    console.log('Preview:', fullText.substring(0, 300));
+
+                    if (fullText.length >= 50) {
+                        return fullText;
+                    }
+                }
+            } catch (langError) {
+                console.log(`No ${lang} captions via scraper:`, (langError as Error).message);
+            }
+        }
+    } catch (scraperError) {
+        console.log('youtube-captions-scraper failed:', (scraperError as Error).message);
+    }
+
+    // Method 2: Fallback to youtube-transcript
     try {
         const { YoutubeTranscript } = await import('youtube-transcript');
-        const transcript = await YoutubeTranscript.fetchTranscript(videoId);
-        const fullText = transcript.map((t: { text: string }) => t.text).join(' ');
 
-        // Log for debugging
-        console.log('YouTube transcript length:', fullText.length);
-        console.log('YouTube transcript preview:', fullText.substring(0, 500));
+        const languages = ['fr', undefined]; // Try French, then default
+        for (const lang of languages) {
+            try {
+                console.log(`Trying youtube-transcript with lang: ${lang || 'default'}`);
+                const options = lang ? { lang } : {};
+                const transcript = await YoutubeTranscript.fetchTranscript(videoId, options);
 
-        if (fullText.length < 50) {
-            console.log('Transcript too short, returning null');
-            return null;
+                if (transcript && transcript.length > 0) {
+                    const fullText = transcript.map((t: { text: string }) => t.text).join(' ');
+                    console.log(`Got transcript via youtube-transcript (${lang || 'default'}):`, fullText.length, 'chars');
+                    console.log('Preview:', fullText.substring(0, 300));
+
+                    if (fullText.length >= 50) {
+                        return fullText;
+                    }
+                }
+            } catch (langError) {
+                console.log(`No ${lang || 'default'} transcript:`, (langError as Error).message);
+            }
         }
-
-        return fullText;
-    } catch (error) {
-        console.error('Error fetching YouTube transcript:', error);
-        // Return null to trigger manual description fallback
-        return null;
+    } catch (ytError) {
+        console.log('youtube-transcript failed:', (ytError as Error).message);
     }
+
+    // Method 3: Try to fetch directly from YouTube page (scraping)
+    try {
+        console.log('Trying direct YouTube page scrape...');
+        const response = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Accept-Language': 'fr-FR,fr;q=0.9,en;q=0.8',
+            },
+        });
+
+        const html = await response.text();
+
+        // Try to extract captions URL from the page
+        const captionsMatch = html.match(/"captionTracks":\s*\[(.*?)\]/);
+        if (captionsMatch) {
+            console.log('Found caption tracks in page');
+            const captionsData = JSON.parse(`[${captionsMatch[1]}]`);
+
+            // Find French or auto-generated captions
+            const frCaptions = captionsData.find((c: any) =>
+                c.languageCode === 'fr' || c.vssId?.includes('.fr') || c.kind === 'asr'
+            );
+
+            if (frCaptions?.baseUrl) {
+                console.log('Fetching captions from:', frCaptions.baseUrl.substring(0, 100));
+                const captionsResponse = await fetch(frCaptions.baseUrl);
+                const captionsXml = await captionsResponse.text();
+
+                // Parse XML to extract text
+                const textMatches = captionsXml.match(/<text[^>]*>([^<]*)<\/text>/g);
+                if (textMatches) {
+                    const fullText = textMatches
+                        .map((t: string) => {
+                            const match = t.match(/<text[^>]*>([^<]*)<\/text>/);
+                            return match ? match[1].replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"') : '';
+                        })
+                        .join(' ');
+
+                    console.log('Got transcript via direct scrape:', fullText.length, 'chars');
+                    console.log('Preview:', fullText.substring(0, 300));
+
+                    if (fullText.length >= 50) {
+                        return fullText;
+                    }
+                }
+            }
+        }
+    } catch (scrapeError) {
+        console.log('Direct scrape failed:', (scrapeError as Error).message);
+    }
+
+    console.log('All transcript methods failed for video:', videoId);
+    return null;
 }
 
 async function getInstagramContent(videoId: string): Promise<string> {
