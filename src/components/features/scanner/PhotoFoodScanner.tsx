@@ -44,74 +44,68 @@ export function PhotoFoodScanner({ onFoodDetected, mealType }: PhotoFoodScannerP
             // Try with environment camera first (back camera on mobile)
             let stream: MediaStream | null = null;
 
+            // Simpler constraints for better iOS compatibility
+            const constraints = {
+                video: {
+                    facingMode: 'environment',
+                    width: { ideal: 1280, max: 1920 },
+                    height: { ideal: 720, max: 1080 }
+                },
+                audio: false
+            };
+
             try {
-                stream = await navigator.mediaDevices.getUserMedia({
-                    video: {
-                        facingMode: { ideal: 'environment' },
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 }
-                    },
-                    audio: false
-                });
+                stream = await navigator.mediaDevices.getUserMedia(constraints);
             } catch {
-                // Fallback: try without facingMode constraint (use any available camera)
+                // Fallback: try with minimal constraints
                 console.log('Environment camera not available, trying default camera');
                 stream = await navigator.mediaDevices.getUserMedia({
-                    video: {
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 }
-                    },
+                    video: true,
                     audio: false
                 });
             }
 
             if (videoRef.current && stream) {
-                videoRef.current.srcObject = stream;
+                const video = videoRef.current;
 
-                // Wait for video to be ready before playing
-                await new Promise<void>((resolve, reject) => {
-                    const video = videoRef.current!;
+                // Set attributes BEFORE setting srcObject for iOS
+                video.setAttribute('autoplay', 'true');
+                video.setAttribute('playsinline', 'true');
+                video.setAttribute('webkit-playsinline', 'true');
+                video.setAttribute('muted', 'true');
+                video.muted = true;
 
-                    const onLoadedMetadata = () => {
-                        video.removeEventListener('loadedmetadata', onLoadedMetadata);
-                        video.removeEventListener('error', onError);
+                video.srcObject = stream;
+
+                // Wait for video to be ready
+                await new Promise<void>((resolve) => {
+                    const onCanPlay = () => {
+                        video.removeEventListener('canplay', onCanPlay);
                         resolve();
                     };
 
-                    const onError = (e: Event) => {
-                        video.removeEventListener('loadedmetadata', onLoadedMetadata);
-                        video.removeEventListener('error', onError);
-                        reject(new Error('Video failed to load'));
-                    };
-
-                    // If already loaded, resolve immediately
-                    if (video.readyState >= 1) {
+                    if (video.readyState >= 3) {
                         resolve();
                     } else {
-                        video.addEventListener('loadedmetadata', onLoadedMetadata);
-                        video.addEventListener('error', onError);
+                        video.addEventListener('canplay', onCanPlay);
+                        // Timeout fallback
+                        setTimeout(resolve, 3000);
                     }
-
-                    // Timeout after 5 seconds
-                    setTimeout(() => {
-                        video.removeEventListener('loadedmetadata', onLoadedMetadata);
-                        video.removeEventListener('error', onError);
-                        resolve(); // Resolve anyway to try playing
-                    }, 5000);
                 });
 
-                // Ensure video attributes are set for mobile
-                videoRef.current.setAttribute('playsinline', 'true');
-                videoRef.current.setAttribute('webkit-playsinline', 'true');
-
-                await videoRef.current.play();
+                // Try to play - required for iOS
+                try {
+                    await video.play();
+                } catch (playError) {
+                    console.log('Autoplay failed, video should still work:', playError);
+                }
             }
 
             setCameraStream(stream);
             setState('camera');
         } catch (err) {
             console.error('Camera access denied:', err);
-            setError("Impossible d'accéder à la caméra. Vérifiez les permissions ou essayez avec un autre navigateur.");
+            setError("Impossible d'accéder à la caméra. Vérifiez les permissions dans Réglages > Safari > Caméra.");
             setState('error');
         }
     }, []);
@@ -279,7 +273,8 @@ export function PhotoFoodScanner({ onFoodDetected, mealType }: PhotoFoodScannerP
                                 autoPlay
                                 playsInline
                                 muted
-                                webkit-playsinline="true"
+                                controls={false}
+                                style={{ objectFit: 'cover' }}
                                 className="w-full h-full object-cover"
                             />
 
