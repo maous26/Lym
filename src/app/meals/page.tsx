@@ -3,14 +3,15 @@
 import { useState, useMemo, useEffect, Suspense, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { cn } from '@/lib/utils';
-import { Plus, CalendarDays, BookOpen, ChevronRight, ChevronLeft, Check, Flame, Users, Star, Clock, Loader2 } from 'lucide-react';
+import { Plus, CalendarDays, BookOpen, ChevronRight, ChevronLeft, Check, Flame, Users, Star, Clock, Loader2, Trash2 } from 'lucide-react';
 import { DateSelector } from '@/components/features/meals/DateSelector';
 import { DailyNutritionSummary } from '@/components/features/meals/DailyNutritionSummary';
 import { MealSection } from '@/components/features/meals/MealSection';
 import { useMealStore, useSelectedDateMeals } from '@/store/meal-store';
 import { useSoloProfile } from '@/store/user-store';
-import { getCommunityRecipes, addRecipeToMealPlan } from '@/app/actions/social-recipe';
+import { getCommunityRecipes, addRecipeToMealPlan, deleteRecipe } from '@/app/actions/social-recipe';
 import { RecipeRatingModal } from '@/components/features/recipes';
 import type { MealType, DailyMeals } from '@/types/meal';
 
@@ -45,6 +46,8 @@ function MealsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get('tab');
+  const { data: session } = useSession();
+  const currentUserId = session?.user?.id;
 
   const [activeTab, setActiveTab] = useState<TabType>(
     tabParam === 'calendar' ? 'calendar' : tabParam === 'recipes' ? 'recipes' : 'journal'
@@ -60,6 +63,7 @@ function MealsPageContent() {
     title: '',
   });
   const [addingRecipeId, setAddingRecipeId] = useState<string | null>(null);
+  const [deletingRecipeId, setDeletingRecipeId] = useState<string | null>(null);
 
   // Update tab when URL param changes
   useEffect(() => {
@@ -239,6 +243,20 @@ function MealsPageContent() {
       alert(result.error || 'Erreur');
     }
     setAddingRecipeId(null);
+  };
+
+  // Handle deleting recipe
+  const handleDeleteRecipe = async (recipeId: string, title: string) => {
+    if (!confirm(`Supprimer la recette "${title}" ?`)) return;
+
+    setDeletingRecipeId(recipeId);
+    const result = await deleteRecipe(recipeId);
+    if (result.success) {
+      setCommunityRecipes(prev => prev.filter(r => r.id !== recipeId));
+    } else {
+      alert(result.error || 'Erreur lors de la suppression');
+    }
+    setDeletingRecipeId(null);
   };
 
   // Format month name
@@ -740,6 +758,20 @@ function MealsPageContent() {
                             )}
                             Ajouter
                           </button>
+                          {/* Delete button - only for author */}
+                          {currentUserId && recipe.author?.id === currentUserId && (
+                            <button
+                              onClick={() => handleDeleteRecipe(recipe.id, recipe.title)}
+                              disabled={deletingRecipeId === recipe.id}
+                              className="py-1.5 px-2 text-xs font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors flex items-center justify-center disabled:opacity-50"
+                            >
+                              {deletingRecipeId === recipe.id ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : (
+                                <Trash2 className="w-3 h-3" />
+                              )}
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>

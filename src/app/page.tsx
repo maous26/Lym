@@ -18,7 +18,7 @@ import {
 } from '@/components/features/dashboard/widgets';
 import { WeightTracker, WeightTrackerRef } from '@/components/features/weight/WeightTracker';
 import { ConnectedDevices } from '@/components/features/weight/ConnectedDevices';
-import { SubmitRecipeWidget, CommunityRecipesWidget, RecipeRatingModal } from '@/components/features/recipes';
+import { SubmitRecipeWidget } from '@/components/features/recipes';
 import { XpToast } from '@/components/features/gamification';
 import { ChevronDown, ChevronUp, Scale, Bluetooth } from 'lucide-react';
 
@@ -57,13 +57,6 @@ export default function HomePage() {
   const [isWeightExpanded, setIsWeightExpanded] = useState(false);
   const [isDevicesExpanded, setIsDevicesExpanded] = useState(false);
   const [hasConnectedDevice, setHasConnectedDevice] = useState(false);
-
-  // Rating modal state
-  const [ratingModal, setRatingModal] = useState<{ isOpen: boolean; recipeId: string; title: string }>({
-    isOpen: false,
-    recipeId: '',
-    title: '',
-  });
 
   // XP toast state
   const [xpToast, setXpToast] = useState<{ show: boolean; amount: number; reason?: string }>({
@@ -210,24 +203,6 @@ export default function HomePage() {
     setTimeout(() => setXpToast({ show: false, amount: 0 }), 3000);
   };
 
-  // Handle rating modal
-  const handleOpenRatingModal = (recipeId: string, title: string) => {
-    setRatingModal({ isOpen: true, recipeId, title });
-  };
-
-  const handleRatingSuccess = (result: { xpEarned?: number }) => {
-    if (result.xpEarned) {
-      setXpToast({ show: true, amount: result.xpEarned, reason: 'Note ajoutée' });
-      setTimeout(() => setXpToast({ show: false, amount: 0 }), 3000);
-    }
-  };
-
-  // Handle add recipe to plan
-  const handleAddRecipeToPlan = (recipeId: string) => {
-    // TODO: Open date picker modal to select date and meal type
-    router.push(`/plan?addRecipe=${recipeId}`);
-  };
-
   // Loading state
   if (!isHydrated) {
     return (
@@ -354,15 +329,6 @@ export default function HomePage() {
           <SubmitRecipeWidget onSuccess={handleRecipeSubmitSuccess} />
         </section>
 
-        {/* Community Recipes */}
-        <section className="mt-6">
-          <CommunityRecipesWidget
-            onRate={handleOpenRatingModal}
-            onAddToPlan={handleAddRecipeToPlan}
-            onSeeAll={() => router.push('/meals?tab=recipes')}
-          />
-        </section>
-
         {/* Coach Insight */}
         <section className="mt-6">
           <AnimatePresence>
@@ -484,15 +450,6 @@ export default function HomePage() {
 
       {/* Bottom Navigation */}
       <BottomNav variant={activeMode === 'family' ? 'family' : 'solo'} />
-
-      {/* Rating Modal */}
-      <RecipeRatingModal
-        isOpen={ratingModal.isOpen}
-        onClose={() => setRatingModal({ isOpen: false, recipeId: '', title: '' })}
-        recipeId={ratingModal.recipeId}
-        recipeTitle={ratingModal.title}
-        onSuccess={handleRatingSuccess}
-      />
 
       {/* XP Toast */}
       <XpToast

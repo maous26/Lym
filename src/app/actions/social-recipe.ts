@@ -595,3 +595,42 @@ export async function getUserSubmittedRecipes(): Promise<{
         return { success: false, error: 'Erreur' };
     }
 }
+
+/**
+ * Delete a recipe (only by author)
+ */
+export async function deleteRecipe(recipeId: string): Promise<{
+    success: boolean;
+    error?: string;
+}> {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+        return { success: false, error: 'Non authentifié' };
+    }
+
+    try {
+        // Find the recipe and verify ownership
+        const recipe = await prisma.recipe.findUnique({
+            where: { id: recipeId },
+            select: { authorId: true },
+        });
+
+        if (!recipe) {
+            return { success: false, error: 'Recette non trouvée' };
+        }
+
+        if (recipe.authorId !== session.user.id) {
+            return { success: false, error: 'Vous ne pouvez supprimer que vos propres recettes' };
+        }
+
+        // Delete the recipe (ratings will cascade delete)
+        await prisma.recipe.delete({
+            where: { id: recipeId },
+        });
+
+        return { success: true };
+    } catch (error) {
+        console.error('Error deleting recipe:', error);
+        return { success: false, error: 'Erreur lors de la suppression' };
+    }
+}
