@@ -107,9 +107,22 @@ async function getYouTubeTranscript(videoId: string): Promise<string> {
     try {
         const { YoutubeTranscript } = await import('youtube-transcript');
         const transcript = await YoutubeTranscript.fetchTranscript(videoId);
-        return transcript.map((t: { text: string }) => t.text).join(' ');
+        const fullText = transcript.map((t: { text: string }) => t.text).join(' ');
+
+        // Log for debugging
+        console.log('YouTube transcript length:', fullText.length);
+        console.log('YouTube transcript preview:', fullText.substring(0, 500));
+
+        if (fullText.length < 100) {
+            throw new Error('Le transcript de cette vidéo est trop court. La vidéo n\'a peut-être pas de sous-titres détaillés.');
+        }
+
+        return fullText;
     } catch (error) {
         console.error('Error fetching YouTube transcript:', error);
+        if (error instanceof Error && error.message.includes('transcript')) {
+            throw error;
+        }
         throw new Error('Impossible de récupérer les sous-titres de cette vidéo. Assurez-vous que la vidéo a des sous-titres disponibles.');
     }
 }
@@ -143,30 +156,34 @@ async function extractRecipeFromTranscript(transcript: string, videoUrl: string)
         throw new Error("L'IA n'est pas configurée");
     }
 
-    // Clean transcript - remove potentially problematic content
+    // Light cleaning - only remove control characters, keep all letters (including international)
     const cleanedTranscript = transcript
         .substring(0, 15000)
-        .replace(/[^\w\sàâäéèêëïîôùûüÿçœæ.,!?;:'"()-]/gi, ' ')
+        .replace(/[\x00-\x1F\x7F]/g, ' ') // Remove control characters only
         .replace(/\s+/g, ' ')
         .trim();
 
-    const prompt = `Tu es un assistant culinaire. Ta tâche est d'analyser ce transcript de vidéo de cuisine et d'extraire les informations de la recette.
+    // Log for debugging
+    console.log('Cleaned transcript length:', cleanedTranscript.length);
+    console.log('Cleaned transcript preview:', cleanedTranscript.substring(0, 300));
+
+    const prompt = `Tu es un assistant culinaire expert. Analyse ce transcript de vidéo YouTube et extrais la recette EXACTE qui y est présentée.
 
 TRANSCRIPT DE LA VIDÉO:
 """
 ${cleanedTranscript}
 """
 
-TÂCHE: Extrais les informations de cette recette de cuisine. C'est une tâche d'extraction d'information, pas de génération de contenu problématique.
+RÈGLES STRICTES:
+1. TITRE: Utilise le nom de la recette mentionné dans le transcript. Si pas de nom explicite, crée un titre basé sur le plat principal décrit.
+2. INGRÉDIENTS: Liste UNIQUEMENT les ingrédients mentionnés dans le transcript avec leurs quantités.
+3. INSTRUCTIONS: Extrais les étapes de préparation TELLES QUE décrites dans la vidéo.
+4. NUTRITION: Calcule basé sur les ingrédients réels mentionnés.
+5. NE PAS INVENTER: Si une information n'est pas dans le transcript, mets une valeur raisonnable mais basée sur le contexte du transcript.
 
-RÈGLES:
-1. TITRE: Crée un titre descriptif basé sur les ingrédients principaux mentionnés (ex: "Poulet aux légumes", "Pâtes à la carbonara")
-2. INGRÉDIENTS: Liste tous les ingrédients mentionnés avec quantités estimées
-3. INSTRUCTIONS: Résume les étapes de préparation
-4. NUTRITION: Estime les calories et macros basées sur les ingrédients typiques
-5. Si le transcript ne contient pas de recette claire, crée une recette simple basée sur les aliments mentionnés
+IMPORTANT: La recette doit correspondre AU CONTENU DU TRANSCRIPT, pas à une recette générique.
 
-IMPORTANT: Réponds UNIQUEMENT avec le JSON ci-dessous, sans texte avant ou après:
+Réponds UNIQUEMENT avec ce JSON:
 
 {
   "title": "Nom descriptif de la recette",
