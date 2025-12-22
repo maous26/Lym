@@ -292,6 +292,7 @@ export default function HomePage() {
             meals={mealSlots}
             onAddMeal={handleAddMeal}
             onViewMeal={handleViewMeal}
+            onViewCalendar={() => router.push('/meals?tab=calendar')}
           />
         </section>
 

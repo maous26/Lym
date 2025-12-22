@@ -371,8 +371,11 @@ export const useMealStore = create<MealState & MealActions>()(
 
 // Selector hooks
 export const useSelectedDate = () => useMealStore((state) => state.selectedDate);
-export const useTodayMeals = () =>
-  useMealStore((state) => state.meals[getTodayDate()]);
+export const useTodayMeals = () => {
+  // Use the selector pattern that recalculates today's date on each call
+  const todayDate = new Date().toISOString().split('T')[0];
+  return useMealStore((state) => state.meals[todayDate]);
+};
 export const useSelectedDateMeals = () =>
   useMealStore((state) => state.meals[state.selectedDate]);
 export const useAddMealItems = () => useMealStore((state) => state.addMealItems);

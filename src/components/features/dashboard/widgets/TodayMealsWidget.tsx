@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { Plus, Check, Clock, Utensils } from 'lucide-react';
+import { Plus, Check, Clock, Utensils, CalendarDays } from 'lucide-react';
 import type { MealType } from '@/types/meal';
 
 interface MealSlot {
@@ -20,6 +20,7 @@ interface TodayMealsWidgetProps {
   meals: MealSlot[];
   onAddMeal: (type: MealType) => void;
   onViewMeal: (type: MealType) => void;
+  onViewCalendar?: () => void;
   className?: string;
 }
 
@@ -230,6 +231,7 @@ export function TodayMealsWidget({
   meals,
   onAddMeal,
   onViewMeal,
+  onViewCalendar,
   className,
 }: TodayMealsWidgetProps) {
   const loggedCount = meals.filter((m) => m.status === 'logged').length;
@@ -260,8 +262,22 @@ export function TodayMealsWidget({
           </div>
         </div>
 
-        {/* Circular progress */}
-        <div className="relative w-14 h-14">
+        <div className="flex items-center gap-3">
+          {/* Calendar button */}
+          {onViewCalendar && (
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={onViewCalendar}
+              className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors"
+              aria-label="Voir le calendrier"
+            >
+              <CalendarDays className="w-5 h-5" />
+            </motion.button>
+          )}
+
+          {/* Circular progress */}
+          <div className="relative w-14 h-14">
           <svg className="w-full h-full transform -rotate-90">
             <circle
               cx="28"
@@ -296,6 +312,7 @@ export function TodayMealsWidget({
               {Math.round(progress)}%
             </span>
           </div>
+        </div>
         </div>
       </div>
 
