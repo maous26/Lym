@@ -555,12 +555,15 @@ export async function saveValidatedRecipe(
         let generatedImageUrl: string | null = null;
         try {
             const imagePrompt = `${recipeData.title}: ${recipeData.description}`;
+            console.log('Generating image for recipe:', imagePrompt.substring(0, 100));
             const imageResult = await generateFoodImage(imagePrompt);
+            console.log('Image generation result:', imageResult.success, imageResult.error || 'no error');
             if (imageResult.success && imageResult.image) {
                 generatedImageUrl = imageResult.image;
+                console.log('Generated image URL length:', generatedImageUrl.length);
             }
         } catch (imageError) {
-            console.warn('Could not generate image for recipe:', imageError);
+            console.error('Could not generate image for recipe:', imageError);
         }
 
         // Save to database

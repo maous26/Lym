@@ -11,9 +11,6 @@ import {
     ChefHat,
     Star,
     Plus,
-    Youtube,
-    Instagram,
-    Play,
     Check,
 } from 'lucide-react';
 import { getRecipeWithRatings } from '@/app/actions/recipe';
@@ -106,19 +103,6 @@ export default function RecipeDetailPage() {
         }
     };
 
-    const getPlatformIcon = (platform: string | null) => {
-        switch (platform) {
-            case 'youtube':
-                return <Youtube className="w-4 h-4" />;
-            case 'instagram':
-                return <Instagram className="w-4 h-4" />;
-            case 'tiktok':
-                return <Play className="w-4 h-4" />;
-            default:
-                return null;
-        }
-    };
-
     const getDifficultyLabel = (difficulty: string | null) => {
         switch (difficulty) {
             case 'easy':
@@ -177,14 +161,6 @@ export default function RecipeDetailPage() {
                 >
                     <ArrowLeft className="w-5 h-5 text-stone-700" />
                 </button>
-
-                {/* Platform Badge */}
-                {recipe.videoPlatform && (
-                    <div className="absolute top-4 right-4 px-3 py-1.5 bg-white/90 backdrop-blur-sm rounded-full flex items-center gap-1.5 shadow-lg">
-                        {getPlatformIcon(recipe.videoPlatform)}
-                        <span className="text-xs font-medium capitalize">{recipe.videoPlatform}</span>
-                    </div>
-                )}
 
                 {/* Rating Badge */}
                 {recipe.ratingsCount > 0 && (
@@ -292,18 +268,6 @@ export default function RecipeDetailPage() {
                         </ol>
                     </div>
 
-                    {/* Video Link */}
-                    {recipe.videoUrl && (
-                        <a
-                            href={recipe.videoUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center justify-center gap-2 w-full py-3 bg-stone-100 rounded-xl text-stone-700 font-medium mb-6 hover:bg-stone-200 transition-colors"
-                        >
-                            {getPlatformIcon(recipe.videoPlatform)}
-                            <span>Voir la vidéo originale</span>
-                        </a>
-                    )}
                 </motion.div>
             </div>
 
