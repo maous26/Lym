@@ -103,12 +103,6 @@ function parseVideoUrl(url: string): VideoInfo | null {
 // TRANSCRIPT EXTRACTION
 // ============================================
 
-interface YouTubeVideoInfo {
-    title: string;
-    description: string;
-    transcript: string | null;
-}
-
 interface RapidAPITranscriptSegment {
     text: string;
     start: number;
@@ -184,45 +178,6 @@ async function getYouTubeTranscriptViaRapidAPI(videoId: string): Promise<string 
     }
 }
 
-async function getYouTubeVideoInfo(videoId: string): Promise<YouTubeVideoInfo | null> {
-    console.log('Fetching video info for:', videoId);
-
-    try {
-        const { Innertube } = await import('youtubei.js');
-
-        const youtube = await Innertube.create({
-            lang: 'fr',
-            location: 'FR',
-        });
-
-        const info = await youtube.getInfo(videoId);
-
-        const title = info.basic_info?.title || '';
-        const description = info.basic_info?.short_description || '';
-
-        console.log('Got video title:', title);
-        console.log('Description length:', description.length);
-
-        // Try to get transcript
-        let transcript: string | null = null;
-        try {
-            const transcriptData = await info.getTranscript();
-            if (transcriptData?.transcript?.content?.body?.initial_segments) {
-                const segments = transcriptData.transcript.content.body.initial_segments;
-                transcript = segments.map((s: any) => s.snippet?.text || '').join(' ');
-                console.log('Got transcript via youtubei.js:', transcript.length, 'chars');
-            }
-        } catch (transcriptError) {
-            console.log('Transcript not available via youtubei.js:', (transcriptError as Error).message);
-        }
-
-        return { title, description, transcript };
-    } catch (error) {
-        console.error('Error getting video info via youtubei.js:', error);
-        return null;
-    }
-}
-
 async function getYouTubeTranscript(videoId: string): Promise<string | null> {
     console.log('Fetching transcript for video:', videoId);
 
@@ -236,18 +191,7 @@ async function getYouTubeTranscript(videoId: string): Promise<string | null> {
         console.log('RapidAPI failed:', (e as Error).message);
     }
 
-    // Method 1: Try youtubei.js (works for some videos)
-    try {
-        const videoInfo = await getYouTubeVideoInfo(videoId);
-        if (videoInfo?.transcript && videoInfo.transcript.length >= 50) {
-            return videoInfo.transcript;
-        }
-        // If no transcript but we have description, we'll use that as fallback later
-    } catch (e) {
-        console.log('youtubei.js failed:', (e as Error).message);
-    }
-
-    // Method 3: Try youtube-captions-scraper
+    // Method 1: Try youtube-captions-scraper
     try {
         const { getSubtitles } = await import('youtube-captions-scraper');
 
@@ -278,7 +222,7 @@ async function getYouTubeTranscript(videoId: string): Promise<string | null> {
         console.log('youtube-captions-scraper failed:', (scraperError as Error).message);
     }
 
-    // Method 4: Fallback to youtube-transcript
+    // Method 2: Fallback to youtube-transcript
     try {
         const { YoutubeTranscript } = await import('youtube-transcript');
 
@@ -306,7 +250,7 @@ async function getYouTubeTranscript(videoId: string): Promise<string | null> {
         console.log('youtube-transcript failed:', (ytError as Error).message);
     }
 
-    // Method 5: Try to fetch directly from YouTube page (scraping)
+    // Method 3: Try to fetch directly from YouTube page (scraping)
     try {
         console.log('Trying direct YouTube page scrape...');
         const response = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
@@ -549,44 +493,16 @@ export async function extractVideoRecipe(videoUrl: string, manualDescription?: s
             return { success: false, error: 'Cette vidéo a déjà été soumise !' };
         }
 
-        // Get transcript and video info based on platform
+        // Get transcript based on platform
         let transcript: string | null = null;
-        let videoTitle: string | null = null;
-        let videoDescription: string | null = null;
 
         if (videoInfo.platform === 'youtube') {
-            // First, try to get full video info including description
-            const ytInfo = await getYouTubeVideoInfo(videoInfo.videoId);
-            if (ytInfo) {
-                videoTitle = ytInfo.title;
-                videoDescription = ytInfo.description;
-                transcript = ytInfo.transcript;
-                console.log('Got YouTube info - Title:', videoTitle);
-                console.log('Has transcript:', !!transcript);
-                console.log('Description length:', videoDescription?.length || 0);
-            }
-
-            // If no transcript from youtubei.js, try other methods
-            if (!transcript || transcript.length < 50) {
-                transcript = await getYouTubeTranscript(videoInfo.videoId);
-            }
-
-            // If still no transcript, use video description as fallback
-            if ((!transcript || transcript.length < 50) && videoDescription && videoDescription.length > 100) {
-                console.log('Using video description as transcript fallback');
-                // Combine title and description for better context
-                transcript = `Titre de la vidéo: ${videoTitle}\n\nDescription:\n${videoDescription}`;
-            }
+            transcript = await getYouTubeTranscript(videoInfo.videoId);
         }
 
         // Use manual description if provided (takes priority)
         if (manualDescription && manualDescription.trim().length > 0) {
-            // If we have a video title, prepend it
-            if (videoTitle) {
-                transcript = `Titre de la vidéo: ${videoTitle}\n\nDescription fournie:\n${manualDescription}`;
-            } else {
-                transcript = manualDescription;
-            }
+            transcript = manualDescription;
         }
 
         // If no transcript available, ask for manual description
