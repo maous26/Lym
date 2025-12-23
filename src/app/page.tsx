@@ -15,7 +15,6 @@ import {
   RecipeSuggestionWidget,
   HydrationWidget,
 } from '@/components/features/dashboard/widgets';
-import { ProgressCollapsibleWidget } from '@/components/features/progress';
 import { useMealStore } from '@/store/meal-store';
 import { WeightTracker, WeightTrackerRef } from '@/components/features/weight/WeightTracker';
 import { ConnectedDevices } from '@/components/features/weight/ConnectedDevices';
@@ -304,24 +303,6 @@ export default function HomePage() {
         {/* Submit Recipe Widget */}
         <section className="mt-6">
           <SubmitRecipeWidget onSuccess={handleRecipeSubmitSuccess} />
-        </section>
-
-        {/* Progress Widget - Collapsible */}
-        <section className="mt-6">
-          <ProgressCollapsibleWidget
-            meals={meals}
-            targets={{
-              calories: targetCalories,
-              proteins: targetProteins,
-              carbs: targetCarbs,
-              fats: targetFats,
-            }}
-            weightProgress={
-              soloProfile?.weight && soloProfile?.targetWeight
-                ? Math.abs(soloProfile.weight - soloProfile.targetWeight)
-                : 0
-            }
-          />
         </section>
 
         {/* Weight Tracking - Collapsible */}
