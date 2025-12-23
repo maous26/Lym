@@ -13,6 +13,7 @@ import {
   Mic,
   X,
   ShoppingBag,
+  Users,
 } from 'lucide-react';
 import { SearchBar } from '@/components/features/search/SearchBar';
 import { SearchResults } from '@/components/features/search/SearchResults';
@@ -29,15 +30,16 @@ import type { MealType, FoodItem, MealItem, NutritionInfo } from '@/types/meal';
 import type { MeasurementUnit } from '@/lib/unit-utils';
 
 // Tab types
-type InputTab = 'search' | 'voice' | 'ai' | 'photo' | 'barcode';
+type InputTab = 'search' | 'voice' | 'ai' | 'photo' | 'barcode' | 'recipes';
 
-// Tab configuration
-const TABS: { id: InputTab; label: string; icon: React.ElementType }[] = [
-  { id: 'search', label: 'Recherche', icon: Search },
-  { id: 'voice', label: 'Vocal', icon: Mic },
-  { id: 'ai', label: 'IA', icon: Sparkles },
-  { id: 'photo', label: 'Photo', icon: Camera },
-  { id: 'barcode', label: 'Code-barres', icon: Barcode },
+// Tab configuration with colors
+const TABS: { id: InputTab; label: string; icon: React.ElementType; color: string; bgColor: string; activeColor: string }[] = [
+  { id: 'search', label: 'Recherche', icon: Search, color: 'text-blue-600', bgColor: 'bg-blue-50', activeColor: 'bg-blue-100' },
+  { id: 'voice', label: 'Vocal', icon: Mic, color: 'text-purple-600', bgColor: 'bg-purple-50', activeColor: 'bg-purple-100' },
+  { id: 'ai', label: 'IA', icon: Sparkles, color: 'text-amber-600', bgColor: 'bg-amber-50', activeColor: 'bg-amber-100' },
+  { id: 'photo', label: 'Photo', icon: Camera, color: 'text-rose-600', bgColor: 'bg-rose-50', activeColor: 'bg-rose-100' },
+  { id: 'barcode', label: 'Code-barres', icon: Barcode, color: 'text-emerald-600', bgColor: 'bg-emerald-50', activeColor: 'bg-emerald-100' },
+  { id: 'recipes', label: 'Recettes', icon: Users, color: 'text-indigo-600', bgColor: 'bg-indigo-50', activeColor: 'bg-indigo-100' },
 ];
 
 // Meal type labels
@@ -198,18 +200,18 @@ function AddMealContent() {
         </div>
 
         {/* Tabs */}
-        <div className="flex px-4 gap-2 pb-3">
-          {TABS.map(({ id, label, icon: Icon }) => (
+        <div className="flex px-4 gap-1.5 pb-3 overflow-x-auto">
+          {TABS.map(({ id, label, icon: Icon, color, bgColor, activeColor }) => (
             <motion.button
               key={id}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => setActiveTab(id)}
               className={cn(
-                'flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-medium transition-colors',
+                'flex-1 min-w-[56px] flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl text-sm font-medium transition-colors',
                 activeTab === id
-                  ? 'bg-primary-100 text-primary-700'
-                  : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                  ? `${activeColor} ${color}`
+                  : `${bgColor} ${color} opacity-70 hover:opacity-100`
               )}
             >
               <Icon className="w-4 h-4" />
@@ -359,6 +361,34 @@ function AddMealContent() {
                 className="mt-4 px-6 py-2.5 bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-xl font-medium"
               >
                 Bientôt disponible
+              </motion.button>
+            </motion.div>
+          )}
+
+          {activeTab === 'recipes' && (
+            <motion.div
+              key="recipes"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="text-center py-12"
+            >
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center mx-auto mb-4">
+                <Users className="w-8 h-8 text-indigo-600" />
+              </div>
+              <h3 className="font-semibold text-stone-700 mb-2">
+                Vos recettes
+              </h3>
+              <p className="text-sm text-stone-500 max-w-xs mx-auto">
+                Parcourez les recettes de la communaute et ajoutez-les a votre repas.
+              </p>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => router.push('/meals?tab=recipes')}
+                className="mt-4 px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-medium"
+              >
+                Voir les recettes
               </motion.button>
             </motion.div>
           )}

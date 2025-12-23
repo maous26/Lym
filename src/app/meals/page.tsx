@@ -1,38 +1,19 @@
 'use client';
 
-import { useState, useMemo, useEffect, Suspense, useCallback } from 'react';
+import { useState, useMemo, useEffect, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useSession } from 'next-auth/react';
 import { cn } from '@/lib/utils';
-import { Plus, CalendarDays, BookOpen, ChevronRight, ChevronLeft, Check, Flame, Users, Star, Clock, Loader2, Trash2 } from 'lucide-react';
+import { CalendarDays, BookOpen, ChevronRight, ChevronLeft, Check, Flame } from 'lucide-react';
 import { DateSelector } from '@/components/features/meals/DateSelector';
 import { DailyNutritionSummary } from '@/components/features/meals/DailyNutritionSummary';
 import { MealSection } from '@/components/features/meals/MealSection';
 import { useMealStore, useSelectedDateMeals } from '@/store/meal-store';
 import { useSoloProfile } from '@/store/user-store';
-import { getCommunityRecipes, addRecipeToMealPlan, deleteRecipe } from '@/app/actions/social-recipe';
-import { RecipeRatingModal } from '@/components/features/recipes';
 import type { MealType, DailyMeals } from '@/types/meal';
 
 // Tab type
-type TabType = 'journal' | 'calendar' | 'recipes';
-
-// Recipe type for community recipes
-interface CommunityRecipe {
-  id: string;
-  title: string;
-  description: string | null;
-  imageUrl: string | null;
-  calories: number;
-  prepTime: number;
-  servings: number;
-  averageRating: number;
-  ratingsCount: number;
-  videoPlatform: string | null;
-  author: { id: string; name: string | null; image: string | null } | null;
-  tags: string[];
-}
+type TabType = 'journal' | 'calendar';
 
 // Meal type emojis
 const mealTypeEmojis: Record<string, string> = {
@@ -46,49 +27,18 @@ function MealsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get('tab');
-  const { data: session } = useSession();
-  const currentUserId = session?.user?.id;
 
   const [activeTab, setActiveTab] = useState<TabType>(
-    tabParam === 'calendar' ? 'calendar' : tabParam === 'recipes' ? 'recipes' : 'journal'
+    tabParam === 'calendar' ? 'calendar' : 'journal'
   );
   const [calendarMonth, setCalendarMonth] = useState(new Date());
-
-  // Community recipes state
-  const [communityRecipes, setCommunityRecipes] = useState<CommunityRecipe[]>([]);
-  const [recipesLoading, setRecipesLoading] = useState(false);
-  const [ratingModal, setRatingModal] = useState<{ isOpen: boolean; recipeId: string; title: string }>({
-    isOpen: false,
-    recipeId: '',
-    title: '',
-  });
-  const [addingRecipeId, setAddingRecipeId] = useState<string | null>(null);
-  const [deletingRecipeId, setDeletingRecipeId] = useState<string | null>(null);
 
   // Update tab when URL param changes
   useEffect(() => {
     if (tabParam === 'calendar') {
       setActiveTab('calendar');
-    } else if (tabParam === 'recipes') {
-      setActiveTab('recipes');
     }
   }, [tabParam]);
-
-  // Load community recipes when tab changes to recipes
-  const loadCommunityRecipes = useCallback(async () => {
-    setRecipesLoading(true);
-    const result = await getCommunityRecipes({ limit: 20 });
-    if (result.success && result.recipes) {
-      setCommunityRecipes(result.recipes);
-    }
-    setRecipesLoading(false);
-  }, []);
-
-  useEffect(() => {
-    if (activeTab === 'recipes' && communityRecipes.length === 0) {
-      loadCommunityRecipes();
-    }
-  }, [activeTab, communityRecipes.length, loadCommunityRecipes]);
 
   // Meal store
   const selectedDate = useMealStore((state) => state.selectedDate);
@@ -232,33 +182,6 @@ function MealsPageContent() {
     setCalendarMonth(new Date());
   };
 
-  // Handle adding recipe to meal plan
-  const handleAddRecipeToPlan = async (recipeId: string) => {
-    setAddingRecipeId(recipeId);
-    const today = new Date().toISOString().split('T')[0];
-    const result = await addRecipeToMealPlan(recipeId, today, 'lunch');
-    if (result.success) {
-      alert('Recette ajoutee a votre plan repas !');
-    } else {
-      alert(result.error || 'Erreur');
-    }
-    setAddingRecipeId(null);
-  };
-
-  // Handle deleting recipe
-  const handleDeleteRecipe = async (recipeId: string, title: string) => {
-    if (!confirm(`Supprimer la recette "${title}" ?`)) return;
-
-    setDeletingRecipeId(recipeId);
-    const result = await deleteRecipe(recipeId);
-    if (result.success) {
-      setCommunityRecipes(prev => prev.filter(r => r.id !== recipeId));
-    } else {
-      alert(result.error || 'Erreur lors de la suppression');
-    }
-    setDeletingRecipeId(null);
-  };
-
   // Format month name
   const monthName = calendarMonth.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
 
@@ -327,18 +250,6 @@ function MealsPageContent() {
             >
               <CalendarDays className="w-4 h-4" />
               Calendrier
-            </button>
-            <button
-              onClick={() => setActiveTab('recipes')}
-              className={cn(
-                'flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors',
-                activeTab === 'recipes'
-                  ? 'text-primary-600 border-b-2 border-primary-600'
-                  : 'text-stone-500 hover:text-stone-700'
-              )}
-            >
-              <Users className="w-4 h-4" />
-              Vos recettes
             </button>
           </div>
         </div>
@@ -644,157 +555,8 @@ function MealsPageContent() {
               </motion.div>
             )}
           </motion.div>
-        ) : activeTab === 'recipes' ? (
-          <motion.div
-            key="recipes"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="px-4 py-4 space-y-4"
-          >
-            {/* Header */}
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                  <Users className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-stone-900">Vos recettes</h3>
-                  <p className="text-xs text-stone-500">Partagees par la communaute</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Loading state */}
-            {recipesLoading && (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
-              </div>
-            )}
-
-            {/* Empty state */}
-            {!recipesLoading && communityRecipes.length === 0 && (
-              <div className="bg-white rounded-2xl p-8 shadow-sm text-center">
-                <Users className="w-12 h-12 text-stone-300 mx-auto mb-3" />
-                <p className="text-stone-600 font-medium">Aucune recette pour le moment</p>
-                <p className="text-stone-400 text-sm mt-1">
-                  Proposez vos recettes depuis la page d'accueil !
-                </p>
-              </div>
-            )}
-
-            {/* Recipe cards grid */}
-            {!recipesLoading && communityRecipes.length > 0 && (
-              <div className="grid grid-cols-1 gap-4">
-                {communityRecipes.map((recipe) => (
-                  <motion.div
-                    key={recipe.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="bg-white rounded-2xl overflow-hidden shadow-sm cursor-pointer active:scale-[0.98] transition-transform"
-                    onClick={() => router.push(`/recipes/${recipe.id}`)}
-                  >
-                    <div className="flex">
-                      {/* Image */}
-                      <div
-                        className="w-28 h-28 flex-shrink-0 bg-cover bg-center bg-gradient-to-br from-orange-100 to-rose-100"
-                        style={{
-                          backgroundImage: recipe.imageUrl
-                            ? `url(${recipe.imageUrl})`
-                            : undefined,
-                        }}
-                      />
-
-                      {/* Content */}
-                      <div className="flex-1 p-3 flex flex-col justify-between">
-                        <div>
-                          <h4 className="font-bold text-stone-900 text-sm line-clamp-2">
-                            {recipe.title}
-                          </h4>
-
-                          {/* Author */}
-                          {recipe.author && (
-                            <p className="text-xs text-stone-400 mt-1">
-                              par {recipe.author.name || 'Anonyme'}
-                            </p>
-                          )}
-
-                          {/* Stats */}
-                          <div className="flex items-center gap-3 mt-2 text-xs text-stone-500">
-                            <span className="flex items-center gap-1">
-                              <Flame className="w-3 h-3 text-orange-500" />
-                              {Math.round(recipe.calories)} kcal
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Clock className="w-3 h-3" />
-                              {recipe.prepTime} min
-                            </span>
-                            {recipe.ratingsCount > 0 && (
-                              <span className="flex items-center gap-1">
-                                <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
-                                {recipe.averageRating.toFixed(1)}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex gap-2 mt-2" onClick={(e) => e.stopPropagation()}>
-                          <button
-                            onClick={() => setRatingModal({ isOpen: true, recipeId: recipe.id, title: recipe.title })}
-                            className="flex-1 py-1.5 text-xs font-medium text-stone-600 bg-stone-100 rounded-lg hover:bg-stone-200 transition-colors flex items-center justify-center gap-1"
-                          >
-                            <Star className="w-3 h-3" />
-                            Noter
-                          </button>
-                          <button
-                            onClick={() => handleAddRecipeToPlan(recipe.id)}
-                            disabled={addingRecipeId === recipe.id}
-                            className="flex-1 py-1.5 text-xs font-medium text-white bg-primary-500 rounded-lg hover:bg-primary-600 transition-colors flex items-center justify-center gap-1 disabled:opacity-50"
-                          >
-                            {addingRecipeId === recipe.id ? (
-                              <Loader2 className="w-3 h-3 animate-spin" />
-                            ) : (
-                              <Plus className="w-3 h-3" />
-                            )}
-                            Ajouter
-                          </button>
-                          {/* Delete button - only for author */}
-                          {currentUserId && recipe.author?.id === currentUserId && (
-                            <button
-                              onClick={() => handleDeleteRecipe(recipe.id, recipe.title)}
-                              disabled={deletingRecipeId === recipe.id}
-                              className="py-1.5 px-2 text-xs font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors flex items-center justify-center disabled:opacity-50"
-                            >
-                              {deletingRecipeId === recipe.id ? (
-                                <Loader2 className="w-3 h-3 animate-spin" />
-                              ) : (
-                                <Trash2 className="w-3 h-3" />
-                              )}
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            )}
-          </motion.div>
         ) : null}
       </AnimatePresence>
-
-      {/* Rating Modal */}
-      <RecipeRatingModal
-        isOpen={ratingModal.isOpen}
-        onClose={() => setRatingModal({ isOpen: false, recipeId: '', title: '' })}
-        recipeId={ratingModal.recipeId}
-        recipeTitle={ratingModal.title}
-        onSuccess={() => {
-          setRatingModal({ isOpen: false, recipeId: '', title: '' });
-          loadCommunityRecipes();
-        }}
-      />
 
     </div>
   );

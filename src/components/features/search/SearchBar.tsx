@@ -101,10 +101,7 @@ export function SearchBar({
             : '0 2px 8px rgba(0, 0, 0, 0.05)',
         }}
         transition={{ duration: 0.2 }}
-        className={cn(
-          'relative flex items-center bg-white rounded-2xl border transition-colors',
-          isFocused ? 'border-primary-300' : 'border-stone-200'
-        )}
+        className="relative flex items-center bg-white rounded-2xl border border-stone-200 transition-colors"
       >
         {/* Search icon */}
         <div className="pl-4 pr-2">
