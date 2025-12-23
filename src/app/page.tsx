@@ -13,7 +13,6 @@ import {
   CoachInsightWidget,
   RecipeSuggestionWidget,
   HydrationWidget,
-  WeeklyPlanWidget,
 } from '@/components/features/dashboard/widgets';
 import { ProgressCollapsibleWidget } from '@/components/features/progress';
 import { useMealStore } from '@/store/meal-store';
@@ -251,8 +250,8 @@ export default function HomePage() {
             firstName={soloProfile?.firstName || 'Utilisateur'}
             greeting={getGreeting()}
             streak={5}
-            avatarUrl={soloProfile?.avatarUrl}
             motivationalMessage="Continue comme ça, tu es sur la bonne voie !"
+            onViewCalendar={() => router.push('/meals?tab=calendar')}
           />
         </section>
 
@@ -274,14 +273,7 @@ export default function HomePage() {
             meals={mealSlots}
             onAddMeal={handleAddMeal}
             onViewMeal={handleViewMeal}
-            onViewCalendar={() => router.push('/meals?tab=calendar')}
-          />
-        </section>
-
-        {/* Weekly Plan IA */}
-        <section className="mt-6">
-          <WeeklyPlanWidget
-            onGeneratePlan={() => router.push('/plan')}
+            onViewPlan={() => router.push('/plan')}
           />
         </section>
 

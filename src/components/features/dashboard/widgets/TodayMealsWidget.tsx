@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { Plus, Check, Clock, Utensils, CalendarDays } from 'lucide-react';
+import { Plus, Check, Clock, Utensils, Sparkles } from 'lucide-react';
 import type { MealType } from '@/types/meal';
 
 interface MealSlot {
@@ -20,7 +20,7 @@ interface TodayMealsWidgetProps {
   meals: MealSlot[];
   onAddMeal: (type: MealType) => void;
   onViewMeal: (type: MealType) => void;
-  onViewCalendar?: () => void;
+  onViewPlan?: () => void;
   className?: string;
 }
 
@@ -218,7 +218,7 @@ export function TodayMealsWidget({
   meals,
   onAddMeal,
   onViewMeal,
-  onViewCalendar,
+  onViewPlan,
   className,
 }: TodayMealsWidgetProps) {
   const loggedCount = meals.filter((m) => m.status === 'logged').length;
@@ -250,16 +250,17 @@ export function TodayMealsWidget({
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Calendar button */}
-          {onViewCalendar && (
+          {/* Plan IA 7 jours button */}
+          {onViewPlan && (
             <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={onViewCalendar}
-              className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors"
-              aria-label="Voir le calendrier"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={onViewPlan}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-semibold shadow-md hover:shadow-lg transition-shadow"
+              aria-label="Plan IA 7 jours"
             >
-              <CalendarDays className="w-5 h-5" />
+              <Sparkles className="w-4 h-4" />
+              <span>Plan IA</span>
             </motion.button>
           )}
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import { CalendarDays } from 'lucide-react';
 import { cn, getGreeting } from '@/lib/utils';
 
 interface WelcomeWidgetProps {
@@ -9,6 +10,7 @@ interface WelcomeWidgetProps {
   avatarUrl?: string;
   streak?: number;
   motivationalMessage?: string;
+  onViewCalendar?: () => void;
   className?: string;
 }
 
@@ -59,9 +61,9 @@ const getMotivationalMessage = (streak: number = 0): string => {
 export function WelcomeWidget({
   firstName,
   greeting: customGreeting,
-  avatarUrl,
   streak = 0,
   motivationalMessage,
+  onViewCalendar,
   className,
 }: WelcomeWidgetProps) {
   const greeting = customGreeting || getGreeting();
@@ -120,25 +122,21 @@ export function WelcomeWidget({
           )}
         </div>
 
-        {/* Avatar */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.2, type: 'spring' }}
-          className="shrink-0"
-        >
-          {avatarUrl ? (
-            <img
-              src={avatarUrl}
-              alt={firstName}
-              className="w-14 h-14 rounded-2xl object-cover ring-2 ring-white shadow-lg"
-            />
-          ) : (
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-400 to-accent-500 flex items-center justify-center text-white text-xl font-bold shadow-lg ring-2 ring-white">
-              {firstName.charAt(0).toUpperCase()}
-            </div>
-          )}
-        </motion.div>
+        {/* Calendar Button */}
+        {onViewCalendar && (
+          <motion.button
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.2, type: 'spring' }}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={onViewCalendar}
+            className="shrink-0 w-12 h-12 rounded-2xl bg-white shadow-lg ring-2 ring-gray-100 flex items-center justify-center text-primary-600 hover:bg-primary-50 transition-colors"
+            aria-label="Voir le calendrier"
+          >
+            <CalendarDays className="w-6 h-6" />
+          </motion.button>
+        )}
       </div>
     </motion.div>
   );
