@@ -33,8 +33,15 @@ export default function HomePage() {
   const soloProfile = useSoloProfile();
   const activeMode = useActiveMode();
   const todayMeals = useTodayMeals();
-  const { meals } = useMealStore();
+  const { meals, syncFromDatabase } = useMealStore();
   const plaisirCredit = usePlaisirCredit();
+
+  // Sync meals from database on mount
+  useEffect(() => {
+    if (isHydrated) {
+      syncFromDatabase();
+    }
+  }, [isHydrated, syncFromDatabase]);
 
   // Ref for WeightTracker to refresh after sync
   const weightTrackerRef = useRef<WeightTrackerRef>(null);

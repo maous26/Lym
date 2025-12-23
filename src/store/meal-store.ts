@@ -144,8 +144,9 @@ export const useMealStore = create<MealState & MealActions>()(
         set({ isLoading: true });
         try {
           const result = await loadAllMeals();
-          if (result.success && 'meals' in result && result.meals) {
-            get().setMealsFromDb(result.meals);
+          if (result.success && 'meals' in result) {
+            // Always sync from DB - if empty array, clear local data
+            get().setMealsFromDb(result.meals || []);
           }
         } catch (error) {
           console.error('Error syncing meals from database:', error);
