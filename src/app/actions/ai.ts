@@ -1,37 +1,47 @@
 'use server';
 
-import { put } from '@vercel/blob';
+import { v2 as cloudinary } from 'cloudinary';
 import { models, isAIAvailable } from '@/lib/ai/config';
 import { COACH_SYSTEM_PROMPT, MEAL_PLANNER_SYSTEM_PROMPT, MEAL_TYPE_GUIDELINES, IMAGE_GENERATION_PROMPT_TEMPLATE } from '@/lib/ai/prompts';
 import { generateUserProfileContext } from '@/lib/ai/user-context';
 import type { UserProfile } from '@/types/user';
 import type { NutritionInfo } from '@/types/meal';
 
+// Configure Cloudinary
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
 /**
- * Upload image to permanent storage (Vercel Blob)
+ * Upload image to Cloudinary permanent storage
  * Downloads the temporary URL and stores it permanently
  */
 async function uploadImageToStorage(tempUrl: string, filename: string): Promise<string | null> {
     try {
-        // Download the image from the temporary URL
-        const imageResponse = await fetch(tempUrl);
-        if (!imageResponse.ok) {
-            console.error('Failed to download image from temp URL:', imageResponse.status);
+        // Check if Cloudinary is configured
+        if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY) {
+            console.warn('Cloudinary not configured, skipping image persistence');
             return null;
         }
 
-        const imageBlob = await imageResponse.blob();
-
-        // Upload to Vercel Blob
-        const blob = await put(`recipes/${filename}.png`, imageBlob, {
-            access: 'public',
-            contentType: 'image/png',
+        // Upload directly from URL to Cloudinary
+        const result = await cloudinary.uploader.upload(tempUrl, {
+            folder: 'lym-recipes',
+            public_id: filename,
+            resource_type: 'image',
+            transformation: [
+                { width: 1024, height: 1024, crop: 'limit' },
+                { quality: 'auto:good' },
+                { fetch_format: 'auto' }
+            ]
         });
 
-        console.log('Image uploaded to Vercel Blob:', blob.url);
-        return blob.url;
+        console.log('Image uploaded to Cloudinary:', result.secure_url);
+        return result.secure_url;
     } catch (error) {
-        console.error('Error uploading image to storage:', error);
+        console.error('Error uploading image to Cloudinary:', error);
         return null;
     }
 }
