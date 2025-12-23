@@ -527,3 +527,303 @@ Réponds UNIQUEMENT avec un JSON valide:
         return { success: false, error: "Impossible de générer les suggestions" };
     }
 }
+
+/**
+ * Types for proactive insights
+ */
+export type ProactiveInsightType = 'tip' | 'alert' | 'motivation' | 'achievement' | 'reminder' | 'trend';
+
+export interface ProactiveInsight {
+    type: ProactiveInsightType;
+    priority: 'high' | 'medium' | 'low';
+    title: string;
+    message: string;
+    action?: string;
+    actionLink?: string;
+    category: 'nutrition' | 'hydration' | 'weight' | 'habits' | 'goals' | 'social';
+}
+
+export interface WeeklyNutritionData {
+    date: string;
+    calories: number;
+    proteins: number;
+    carbs: number;
+    fats: number;
+    mealsLogged: number;
+}
+
+export interface UserContext {
+    profile: UserProfile;
+    todayNutrition: {
+        consumed: NutritionInfo;
+        targets: NutritionInfo;
+    };
+    weeklyData: WeeklyNutritionData[];
+    weightTrend?: {
+        current: number;
+        weekAgo: number;
+        monthAgo: number;
+    };
+    streakDays: number;
+    lastMealTime?: string;
+    hydrationToday?: number;
+    hydrationGoal?: number;
+}
+
+/**
+ * Generate proactive coach insights based on user data and habits
+ * This analyzes patterns and generates personalized notifications
+ */
+export async function generateProactiveInsights(
+    context: UserContext
+): Promise<{ success: boolean; insights?: ProactiveInsight[]; error?: string }> {
+    try {
+        if (!isAIAvailable()) {
+            // Fallback to rule-based insights if AI is not available
+            return { success: true, insights: generateRuleBasedInsights(context) };
+        }
+
+        const profileContext = generateUserProfileContext(context.profile);
+
+        // Build weekly summary
+        const weeklyStats = context.weeklyData.reduce(
+            (acc, day) => ({
+                avgCalories: acc.avgCalories + day.calories / context.weeklyData.length,
+                avgProteins: acc.avgProteins + day.proteins / context.weeklyData.length,
+                totalMeals: acc.totalMeals + day.mealsLogged,
+                daysTracked: acc.daysTracked + (day.mealsLogged > 0 ? 1 : 0),
+            }),
+            { avgCalories: 0, avgProteins: 0, totalMeals: 0, daysTracked: 0 }
+        );
+
+        const today = context.todayNutrition;
+        const caloriePercent = today.targets.calories > 0
+            ? Math.round((today.consumed.calories / today.targets.calories) * 100)
+            : 0;
+        const proteinPercent = today.targets.proteins > 0
+            ? Math.round((today.consumed.proteins / today.targets.proteins) * 100)
+            : 0;
+
+        const prompt = `Tu es un coach nutritionnel IA proactif et bienveillant. Analyse les données suivantes et génère 2-4 insights personnalisés et actionnables.
+
+${profileContext}
+
+DONNÉES AUJOURD'HUI:
+- Calories: ${Math.round(today.consumed.calories)}/${today.targets.calories} kcal (${caloriePercent}%)
+- Protéines: ${Math.round(today.consumed.proteins)}/${today.targets.proteins}g (${proteinPercent}%)
+- Glucides: ${Math.round(today.consumed.carbs)}/${today.targets.carbs}g
+- Lipides: ${Math.round(today.consumed.fats)}/${today.targets.fats}g
+- Heure actuelle: ${new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+${context.lastMealTime ? `- Dernier repas: ${context.lastMealTime}` : ''}
+${context.hydrationToday !== undefined ? `- Hydratation: ${context.hydrationToday}/${context.hydrationGoal || 2500}ml` : ''}
+
+STATISTIQUES SEMAINE (${context.weeklyData.length} derniers jours):
+- Moyenne calories: ${Math.round(weeklyStats.avgCalories)} kcal/jour
+- Moyenne protéines: ${Math.round(weeklyStats.avgProteins)}g/jour
+- Jours trackés: ${weeklyStats.daysTracked}/${context.weeklyData.length}
+- Total repas enregistrés: ${weeklyStats.totalMeals}
+- Streak actuel: ${context.streakDays} jours
+
+${context.weightTrend ? `
+ÉVOLUTION POIDS:
+- Actuel: ${context.weightTrend.current}kg
+- Il y a 1 semaine: ${context.weightTrend.weekAgo}kg (${context.weightTrend.current - context.weightTrend.weekAgo > 0 ? '+' : ''}${(context.weightTrend.current - context.weightTrend.weekAgo).toFixed(1)}kg)
+- Il y a 1 mois: ${context.weightTrend.monthAgo}kg (${context.weightTrend.current - context.weightTrend.monthAgo > 0 ? '+' : ''}${(context.weightTrend.current - context.weightTrend.monthAgo).toFixed(1)}kg)
+` : ''}
+
+RÈGLES POUR LES INSIGHTS:
+1. Sois encourageant, jamais culpabilisant
+2. Propose des actions concrètes et réalisables
+3. Personnalise selon l'heure de la journée
+4. Célèbre les réussites (streak, objectifs atteints)
+5. Anticipe les besoins (rappel collation, hydratation)
+6. Détecte les tendances (baisse de motivation, écarts répétés)
+
+TYPES D'INSIGHTS:
+- tip: Conseil pratique
+- alert: Attention nécessaire (jamais alarmiste)
+- motivation: Encouragement
+- achievement: Célébration d'une réussite
+- reminder: Rappel utile
+- trend: Observation d'une tendance
+
+PRIORITÉS:
+- high: À voir immédiatement
+- medium: Important mais pas urgent
+- low: Informatif
+
+Réponds UNIQUEMENT avec un JSON valide:
+{
+  "insights": [
+    {
+      "type": "tip|alert|motivation|achievement|reminder|trend",
+      "priority": "high|medium|low",
+      "title": "Titre court (max 40 caractères)",
+      "message": "Message personnalisé (max 150 caractères)",
+      "action": "Texte du bouton d'action (optionnel)",
+      "actionLink": "/chemin/vers/page (optionnel)",
+      "category": "nutrition|hydration|weight|habits|goals|social"
+    }
+  ]
+}`;
+
+        const result = await models.flash.generateContent(prompt);
+        const response = result.response;
+        const text = extractTextFromResponse(response);
+        const jsonStr = cleanJsonResponse(text);
+        const data = JSON.parse(jsonStr);
+
+        // Combine AI insights with rule-based insights
+        const ruleBasedInsights = generateRuleBasedInsights(context);
+        const allInsights = [...(data.insights || []), ...ruleBasedInsights];
+
+        // Remove duplicates based on similar titles
+        const uniqueInsights = allInsights.reduce((acc: ProactiveInsight[], insight: ProactiveInsight) => {
+            const isDuplicate = acc.some(
+                (i) => i.title.toLowerCase().includes(insight.title.toLowerCase().slice(0, 10))
+            );
+            if (!isDuplicate) acc.push(insight);
+            return acc;
+        }, []);
+
+        return { success: true, insights: uniqueInsights.slice(0, 5) };
+    } catch (error) {
+        console.error("Error in generateProactiveInsights:", error);
+        // Fallback to rule-based insights
+        return { success: true, insights: generateRuleBasedInsights(context) };
+    }
+}
+
+/**
+ * Generate rule-based insights without AI (fallback/supplement)
+ */
+function generateRuleBasedInsights(context: UserContext): ProactiveInsight[] {
+    const insights: ProactiveInsight[] = [];
+    const now = new Date();
+    const hour = now.getHours();
+    const today = context.todayNutrition;
+
+    const caloriePercent = today.targets.calories > 0
+        ? (today.consumed.calories / today.targets.calories) * 100
+        : 0;
+    const proteinPercent = today.targets.proteins > 0
+        ? (today.consumed.proteins / today.targets.proteins) * 100
+        : 0;
+
+    // Morning reminder (7-10h)
+    if (hour >= 7 && hour <= 10 && today.consumed.calories === 0) {
+        insights.push({
+            type: 'reminder',
+            priority: 'medium',
+            title: 'Petit-déjeuner',
+            message: 'N\'oublie pas de prendre un bon petit-déjeuner pour bien démarrer la journée !',
+            action: 'Ajouter mon petit-déj',
+            actionLink: '/meals/add?type=breakfast',
+            category: 'nutrition',
+        });
+    }
+
+    // Lunch reminder (11h30-14h)
+    if (hour >= 11 && hour <= 14 && caloriePercent < 30) {
+        insights.push({
+            type: 'reminder',
+            priority: 'medium',
+            title: 'Pause déjeuner',
+            message: 'C\'est l\'heure du déjeuner ! Pense à faire une vraie pause.',
+            action: 'Voir les recettes',
+            actionLink: '/meals/add?tab=recipes',
+            category: 'nutrition',
+        });
+    }
+
+    // Snack reminder (15h-17h)
+    if (hour >= 15 && hour <= 17 && caloriePercent >= 50 && caloriePercent < 75) {
+        insights.push({
+            type: 'tip',
+            priority: 'low',
+            title: 'Collation saine',
+            message: 'Un petit creux ? Une collation équilibrée t\'aidera à tenir jusqu\'au dîner.',
+            action: 'Idées collation',
+            actionLink: '/meals/add?type=snack',
+            category: 'nutrition',
+        });
+    }
+
+    // Protein alert
+    if (hour >= 18 && proteinPercent < 60 && caloriePercent > 70) {
+        insights.push({
+            type: 'alert',
+            priority: 'high',
+            title: 'Protéines insuffisantes',
+            message: `Tu n'as atteint que ${Math.round(proteinPercent)}% de ton objectif protéines. Privilégie un dîner riche en protéines !`,
+            action: 'Recettes protéinées',
+            actionLink: '/meals/add?tab=recipes&filter=protein',
+            category: 'nutrition',
+        });
+    }
+
+    // Streak celebration
+    if (context.streakDays > 0 && context.streakDays % 7 === 0) {
+        insights.push({
+            type: 'achievement',
+            priority: 'high',
+            title: `${context.streakDays} jours de streak !`,
+            message: 'Incroyable ! Ta régularité est exemplaire. Continue comme ça !',
+            category: 'habits',
+        });
+    }
+
+    // Hydration reminder
+    if (context.hydrationToday !== undefined && context.hydrationGoal) {
+        const hydrationPercent = (context.hydrationToday / context.hydrationGoal) * 100;
+        if (hour >= 14 && hydrationPercent < 50) {
+            insights.push({
+                type: 'reminder',
+                priority: 'medium',
+                title: 'Hydratation',
+                message: `Tu n'as bu que ${Math.round(hydrationPercent)}% de ton objectif. Garde ta bouteille à portée de main !`,
+                category: 'hydration',
+            });
+        }
+    }
+
+    // Weight trend
+    if (context.weightTrend && context.profile.goal) {
+        const weeklyChange = context.weightTrend.current - context.weightTrend.weekAgo;
+
+        if (context.profile.goal === 'weight_loss' && weeklyChange < -0.3) {
+            insights.push({
+                type: 'motivation',
+                priority: 'medium',
+                title: 'Belle progression !',
+                message: `Tu as perdu ${Math.abs(weeklyChange).toFixed(1)}kg cette semaine. Tu es sur la bonne voie !`,
+                action: 'Voir mon évolution',
+                actionLink: '/weight',
+                category: 'weight',
+            });
+        } else if (context.profile.goal === 'muscle_gain' && weeklyChange > 0.2) {
+            insights.push({
+                type: 'motivation',
+                priority: 'medium',
+                title: 'Objectif en vue !',
+                message: `+${weeklyChange.toFixed(1)}kg cette semaine. Ta prise de masse avance bien !`,
+                action: 'Voir mon évolution',
+                actionLink: '/weight',
+                category: 'weight',
+            });
+        }
+    }
+
+    // Evening summary (20h-22h)
+    if (hour >= 20 && hour <= 22 && caloriePercent >= 90 && caloriePercent <= 110) {
+        insights.push({
+            type: 'achievement',
+            priority: 'low',
+            title: 'Journée équilibrée',
+            message: 'Bravo ! Tu as atteint tes objectifs nutritionnels aujourd\'hui.',
+            category: 'goals',
+        });
+    }
+
+    return insights;
+}

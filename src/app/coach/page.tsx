@@ -1,50 +1,290 @@
 'use client';
 
-import { motion } from 'framer-motion';
-import { ArrowLeft, Settings, Sparkles, History, TrendingUp } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  ArrowLeft,
+  Sparkles,
+  MessageCircle,
+  Bell,
+  CheckCircle,
+  AlertTriangle,
+  Lightbulb,
+  Trophy,
+  TrendingUp,
+  Clock,
+  ChevronRight,
+  X,
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { ChatInterface } from '@/components/features/coach/ChatInterface';
-import { useCoachStore } from '@/store/coach-store';
+import { useCoachStore, type CoachInsight } from '@/store/coach-store';
+import { useMealStore } from '@/store/meal-store';
+import { useUserStore } from '@/store/user-store';
+import { generateProactiveInsights, type UserContext } from '@/app/actions/ai';
+import { chatWithCoach } from '@/app/actions/ai';
 import { cn } from '@/lib/utils';
+
+type TabType = 'messages' | 'chat';
+
+// Icon mapping for insight types
+const insightIcons = {
+  tip: Lightbulb,
+  alert: AlertTriangle,
+  motivation: TrendingUp,
+  achievement: Trophy,
+  reminder: Clock,
+  trend: TrendingUp,
+  success: CheckCircle,
+  warning: AlertTriangle,
+  info: Lightbulb,
+};
+
+// Color mapping for insight types
+const insightColors = {
+  tip: 'from-blue-500 to-cyan-500',
+  alert: 'from-amber-500 to-orange-500',
+  motivation: 'from-emerald-500 to-teal-500',
+  achievement: 'from-purple-500 to-pink-500',
+  reminder: 'from-indigo-500 to-blue-500',
+  trend: 'from-teal-500 to-emerald-500',
+  success: 'from-green-500 to-emerald-500',
+  warning: 'from-amber-500 to-orange-500',
+  info: 'from-blue-500 to-indigo-500',
+};
+
+// Insight card component
+function InsightCard({
+  insight,
+  onMarkRead,
+  onDismiss,
+}: {
+  insight: CoachInsight;
+  onMarkRead: (id: string) => void;
+  onDismiss: (id: string) => void;
+}) {
+  const router = useRouter();
+  const Icon = insightIcons[insight.type as keyof typeof insightIcons] || Lightbulb;
+  const colorClass = insightColors[insight.type as keyof typeof insightColors] || 'from-blue-500 to-cyan-500';
+
+  const handleClick = () => {
+    onMarkRead(insight.id);
+    if (insight.actionLink) {
+      router.push(insight.actionLink);
+    }
+  };
+
+  const timeAgo = (dateString: string) => {
+    const diff = Date.now() - new Date(dateString).getTime();
+    const minutes = Math.floor(diff / 60000);
+    if (minutes < 60) return `Il y a ${minutes}min`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `Il y a ${hours}h`;
+    return `Il y a ${Math.floor(hours / 24)}j`;
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, x: -100 }}
+      className={cn(
+        'relative bg-white rounded-2xl p-4 shadow-sm border',
+        !insight.read ? 'border-primary-200 bg-primary-50/30' : 'border-stone-100'
+      )}
+    >
+      {/* Unread indicator */}
+      {!insight.read && (
+        <div className="absolute top-4 right-4 w-2 h-2 rounded-full bg-primary-500" />
+      )}
+
+      {/* Dismiss button */}
+      <button
+        onClick={() => onDismiss(insight.id)}
+        className="absolute top-3 right-3 p-1 rounded-full hover:bg-stone-100 text-stone-400"
+      >
+        <X className="w-4 h-4" />
+      </button>
+
+      <div className="flex gap-3">
+        {/* Icon */}
+        <div
+          className={cn(
+            'w-10 h-10 rounded-xl flex items-center justify-center text-white flex-shrink-0',
+            `bg-gradient-to-br ${colorClass}`
+          )}
+        >
+          <Icon className="w-5 h-5" />
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 min-w-0 pr-4">
+          <div className="flex items-center gap-2 mb-1">
+            <h3 className="font-semibold text-stone-800 text-sm">{insight.title}</h3>
+            {insight.priority === 'high' && (
+              <span className="px-1.5 py-0.5 text-[10px] font-bold bg-red-100 text-red-600 rounded">
+                Important
+              </span>
+            )}
+          </div>
+          <p className="text-sm text-stone-600 leading-relaxed">{insight.message}</p>
+
+          <div className="flex items-center justify-between mt-3">
+            <span className="text-xs text-stone-400">{timeAgo(insight.createdAt)}</span>
+
+            {insight.action && (
+              <button
+                onClick={handleClick}
+                className="flex items-center gap-1 text-xs font-medium text-primary-600 hover:text-primary-700"
+              >
+                {insight.action}
+                <ChevronRight className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
 
 export default function CoachPage() {
   const router = useRouter();
-  const { totalMessages, streakDays } = useCoachStore();
+  const [activeTab, setActiveTab] = useState<TabType>('messages');
+  const [isLoadingInsights, setIsLoadingInsights] = useState(false);
 
-  // Mock AI response function (replace with actual API call)
+  // Stores
+  const {
+    insights,
+    addInsight,
+    markAsRead,
+    dismissInsight,
+    getUnreadCount,
+    totalMessages,
+    streakDays,
+  } = useCoachStore();
+  const { meals } = useMealStore();
+  const { soloProfile, soloNutritionalNeeds } = useUserStore();
+
+  // Get unread insights
+  const unreadInsights = insights.filter((i) => !i.read && !i.dismissed);
+  const allActiveInsights = insights.filter((i) => !i.dismissed);
+  const unreadCount = getUnreadCount();
+
+  // Build context for proactive insights
+  const buildUserContext = useCallback((): UserContext | null => {
+    if (!soloProfile || !soloNutritionalNeeds) return null;
+
+    const today = new Date().toISOString().split('T')[0];
+    const todayMeals = meals[today];
+
+    // Calculate today's nutrition
+    const consumed = todayMeals?.totalNutrition || { calories: 0, proteins: 0, carbs: 0, fats: 0 };
+    const targets = {
+      calories: soloNutritionalNeeds.calories || 2000,
+      proteins: soloNutritionalNeeds.proteins || 100,
+      carbs: soloNutritionalNeeds.carbs || 250,
+      fats: soloNutritionalNeeds.fats || 65,
+    };
+
+    // Build weekly data
+    const weeklyData = [];
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dateKey = date.toISOString().split('T')[0];
+      const dayMeals = meals[dateKey];
+
+      weeklyData.push({
+        date: dateKey,
+        calories: dayMeals?.totalNutrition?.calories || 0,
+        proteins: dayMeals?.totalNutrition?.proteins || 0,
+        carbs: dayMeals?.totalNutrition?.carbs || 0,
+        fats: dayMeals?.totalNutrition?.fats || 0,
+        mealsLogged: [
+          dayMeals?.breakfast,
+          dayMeals?.lunch,
+          dayMeals?.snack,
+          dayMeals?.dinner,
+        ].filter(Boolean).length,
+      });
+    }
+
+    return {
+      profile: soloProfile,
+      todayNutrition: { consumed, targets },
+      weeklyData,
+      streakDays,
+    };
+  }, [soloProfile, soloNutritionalNeeds, meals, streakDays]);
+
+  // Load proactive insights
+  const loadProactiveInsights = useCallback(async () => {
+    const context = buildUserContext();
+    if (!context) return;
+
+    setIsLoadingInsights(true);
+    try {
+      const result = await generateProactiveInsights(context);
+      if (result.success && result.insights) {
+        // Add new insights that don't already exist
+        result.insights.forEach((insight) => {
+          const exists = insights.some(
+            (i) => i.title === insight.title && !i.dismissed
+          );
+          if (!exists) {
+            addInsight({
+              type: insight.type as any,
+              priority: insight.priority,
+              title: insight.title,
+              message: insight.message,
+              action: insight.action,
+              actionLink: insight.actionLink,
+            });
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error loading proactive insights:', error);
+    } finally {
+      setIsLoadingInsights(false);
+    }
+  }, [buildUserContext, insights, addInsight]);
+
+  // Load insights on mount
+  useEffect(() => {
+    // Only load if we haven't loaded recently (check last insight time)
+    const lastInsight = insights[0];
+    const shouldLoad =
+      !lastInsight ||
+      Date.now() - new Date(lastInsight.createdAt).getTime() > 30 * 60 * 1000; // 30 min
+
+    if (shouldLoad && soloProfile) {
+      loadProactiveInsights();
+    }
+  }, [soloProfile]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Real AI chat handler
   const handleSendMessage = async (message: string): Promise<string> => {
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 1000 + Math.random() * 1000));
+    const context = buildUserContext();
 
-    // Simple mock responses based on keywords
-    const lowerMessage = message.toLowerCase();
+    const result = await chatWithCoach(
+      message,
+      context
+        ? {
+            consumed: context.todayNutrition.consumed,
+            targets: context.todayNutrition.targets,
+          }
+        : undefined,
+      soloProfile || undefined
+    );
 
-    if (lowerMessage.includes('petit-déjeuner') || lowerMessage.includes('petit dejeuner')) {
-      return `Pour un petit-déjeuner équilibré, je vous suggère :\n\n🥣 **Option rapide** : Yaourt grec + muesli + fruits rouges\n\n🍳 **Option protéinée** : Œufs brouillés + pain complet + avocat\n\n🥤 **Smoothie** : Banane + épinards + lait d'amande + beurre de cacahuète\n\nL'important est d'inclure des protéines pour la satiété et des glucides complexes pour l'énergie ! 💪`;
+    if (result.success && result.message) {
+      return result.message;
     }
 
-    if (lowerMessage.includes('protéine') || lowerMessage.includes('protein')) {
-      return `Voici quelques astuces pour augmenter votre apport en protéines :\n\n1. 🥚 **Au petit-déj** : Ajoutez des œufs ou du fromage blanc\n\n2. 🥜 **Snacks malins** : Amandes, houmous, skyr\n\n3. 🍗 **Repas principaux** : Visez 20-30g de protéines (150g de poulet = ~30g)\n\n4. 🥛 **Alternative végétale** : Lentilles, pois chiches, tofu\n\nObjectif : 1.6-2g de protéines par kg de poids corporel si vous êtes actif ! 💪`;
-    }
-
-    if (lowerMessage.includes('recette') || lowerMessage.includes('dîner') || lowerMessage.includes('soir')) {
-      return `Voici une recette rapide et saine pour ce soir :\n\n🍝 **Pâtes complètes aux légumes grillés**\n\n**Ingrédients** (2 pers) :\n- 200g pâtes complètes\n- 1 courgette, 1 poivron\n- 200g tomates cerises\n- 2 c.s. huile d'olive\n- Parmesan, basilic\n\n**Préparation** (25 min) :\n1. Coupez les légumes, faites-les griller\n2. Cuisez les pâtes al dente\n3. Mélangez le tout avec l'huile d'olive\n4. Finissez avec parmesan et basilic frais\n\n📊 ~450 kcal | P: 15g | G: 65g | L: 14g`;
-    }
-
-    if (lowerMessage.includes('eau') || lowerMessage.includes('boire')) {
-      return `Excellente question sur l'hydratation ! 💧\n\n**Objectif** : 1.5 à 2L d'eau par jour (plus si activité physique)\n\n**Mes astuces** :\n\n1. 🌅 Commencez par un grand verre au réveil\n2. 📱 Utilisez une app de rappel\n3. 🍋 Ajoutez du citron ou des fruits pour le goût\n4. 🫖 Le thé et les infusions comptent aussi !\n5. 🍉 Mangez des aliments riches en eau (concombre, pastèque)\n\n**Signe d'une bonne hydratation** : Urine claire et mictions régulières !`;
-    }
-
-    if (lowerMessage.includes('snack') || lowerMessage.includes('goûter') || lowerMessage.includes('collation')) {
-      return `Voici des idées de snacks sains pour le goûter :\n\n🍎 **Fruité** : Pomme + beurre d'amande\n\n🥜 **Protéiné** : Poignée de noix mélangées (30g)\n\n🥛 **Crémeux** : Yaourt grec + miel + cannelle\n\n🥕 **Croquant** : Bâtonnets de légumes + houmous\n\n🍫 **Gourmand** : 2 carrés de chocolat noir 70%\n\nVisez ~150-200 kcal pour un snack équilibré ! 🎯`;
-    }
-
-    if (lowerMessage.includes('sucre') || lowerMessage.includes('réduire')) {
-      return `Réduire le sucre progressivement, c'est la clé ! 🎯\n\n**Étapes pratiques** :\n\n1. 📖 **Lisez les étiquettes** : évitez >10g sucre/100g\n\n2. 🥤 **Boissons** : Passez aux versions sans sucre\n\n3. 🍌 **Sucrez naturellement** : Banane, dattes, cannelle\n\n4. 🍫 **Desserts** : Optez pour le chocolat noir 70%+\n\n5. ⏰ **Progressif** : Réduisez de 25% par semaine\n\n**Astuce** : Le goût s'adapte en 2-3 semaines ! Courage ! 💪`;
-    }
-
-    // Default response
-    return `Merci pour votre question ! 🌟\n\nJe suis là pour vous aider avec :\n\n• 🍽️ Des idées de repas équilibrés\n• 📊 Des conseils nutritionnels personnalisés\n• 🥗 Des recettes simples et saines\n• 💡 Des astuces pour atteindre vos objectifs\n\nN'hésitez pas à me poser des questions plus spécifiques sur votre alimentation !`;
+    return "Désolé, je n'ai pas pu traiter votre demande. Veuillez réessayer.";
   };
 
   return (
@@ -71,32 +311,144 @@ export default function CoachPage() {
             </div>
           </div>
 
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            className="w-10 h-10 rounded-xl bg-stone-100 flex items-center justify-center text-stone-600"
-          >
-            <Settings className="w-5 h-5" />
-          </motion.button>
+          <div className="w-10" /> {/* Spacer */}
         </div>
 
-        {/* Stats bar */}
-        <div className="flex items-center justify-center gap-6 py-2 border-t border-stone-50 bg-stone-50/50">
-          <div className="flex items-center gap-1.5 text-xs text-stone-500">
-            <History className="w-3.5 h-3.5" />
-            <span>{totalMessages} messages</span>
-          </div>
-          <div className="w-1 h-1 rounded-full bg-stone-300" />
-          <div className="flex items-center gap-1.5 text-xs text-stone-500">
-            <TrendingUp className="w-3.5 h-3.5" />
-            <span>{streakDays} jours d'affilée</span>
-          </div>
+        {/* Tabs */}
+        <div className="flex border-t border-stone-100">
+          <button
+            onClick={() => setActiveTab('messages')}
+            className={cn(
+              'flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors relative',
+              activeTab === 'messages'
+                ? 'text-primary-600'
+                : 'text-stone-500 hover:text-stone-700'
+            )}
+          >
+            <Bell className="w-4 h-4" />
+            Messages
+            {unreadCount > 0 && (
+              <span className="px-1.5 py-0.5 text-[10px] font-bold bg-red-500 text-white rounded-full min-w-[18px]">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+            {activeTab === 'messages' && (
+              <motion.div
+                layoutId="activeTab"
+                className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-500"
+              />
+            )}
+          </button>
+
+          <button
+            onClick={() => setActiveTab('chat')}
+            className={cn(
+              'flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors relative',
+              activeTab === 'chat'
+                ? 'text-primary-600'
+                : 'text-stone-500 hover:text-stone-700'
+            )}
+          >
+            <MessageCircle className="w-4 h-4" />
+            Chat
+            {activeTab === 'chat' && (
+              <motion.div
+                layoutId="activeTab"
+                className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-500"
+              />
+            )}
+          </button>
         </div>
       </div>
 
-      {/* Chat interface */}
-      <div className="flex-1">
-        <ChatInterface onSendMessage={handleSendMessage} className="h-[calc(100vh-140px)]" />
+      {/* Content */}
+      <div className="flex-1 overflow-hidden">
+        <AnimatePresence mode="wait">
+          {activeTab === 'messages' ? (
+            <motion.div
+              key="messages"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="h-full overflow-y-auto pb-20"
+            >
+              {/* Stats */}
+              <div className="flex items-center justify-center gap-6 py-3 bg-white border-b border-stone-100">
+                <div className="flex items-center gap-1.5 text-xs text-stone-500">
+                  <MessageCircle className="w-3.5 h-3.5" />
+                  <span>{totalMessages} échanges</span>
+                </div>
+                <div className="w-1 h-1 rounded-full bg-stone-300" />
+                <div className="flex items-center gap-1.5 text-xs text-stone-500">
+                  <TrendingUp className="w-3.5 h-3.5" />
+                  <span>{streakDays} jours d'affilée</span>
+                </div>
+              </div>
+
+              {/* Insights list */}
+              <div className="p-4 space-y-3">
+                {isLoadingInsights && allActiveInsights.length === 0 && (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="flex flex-col items-center gap-3">
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                        className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full"
+                      />
+                      <span className="text-sm text-stone-500">
+                        Analyse de vos habitudes...
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {allActiveInsights.length === 0 && !isLoadingInsights && (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <div className="w-16 h-16 rounded-2xl bg-stone-100 flex items-center justify-center mb-4">
+                      <Bell className="w-8 h-8 text-stone-400" />
+                    </div>
+                    <h3 className="font-semibold text-stone-800 mb-1">
+                      Pas de nouveaux messages
+                    </h3>
+                    <p className="text-sm text-stone-500 max-w-xs">
+                      Votre coach vous enverra des conseils personnalisés basés sur vos habitudes.
+                    </p>
+                    <button
+                      onClick={loadProactiveInsights}
+                      className="mt-4 px-4 py-2 text-sm font-medium text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                    >
+                      Rafraîchir
+                    </button>
+                  </div>
+                )}
+
+                <AnimatePresence>
+                  {allActiveInsights.map((insight) => (
+                    <InsightCard
+                      key={insight.id}
+                      insight={insight}
+                      onMarkRead={markAsRead}
+                      onDismiss={dismissInsight}
+                    />
+                  ))}
+                </AnimatePresence>
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="chat"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              className="h-full"
+            >
+              <ChatInterface
+                onSendMessage={handleSendMessage}
+                className="h-[calc(100vh-140px)]"
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

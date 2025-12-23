@@ -13,6 +13,7 @@ import {
   Plus,
   type LucideIcon,
 } from 'lucide-react';
+import { useCoachStore } from '@/store/coach-store';
 
 interface NavItem {
   href: string;
@@ -43,7 +44,14 @@ export interface BottomNavProps {
 
 export function BottomNav({ variant = 'solo', className }: BottomNavProps) {
   const pathname = usePathname();
-  const items = variant === 'family' ? familyNavItems : navItems;
+  const unreadCount = useCoachStore((state) => state.getUnreadCount());
+  const baseItems = variant === 'family' ? familyNavItems : navItems;
+
+  // Add badge to coach item dynamically
+  const items = baseItems.map((item) => ({
+    ...item,
+    badge: item.href === '/coach' ? unreadCount : item.badge,
+  }));
 
   // Find active index
   const activeIndex = items.findIndex((item) => {
