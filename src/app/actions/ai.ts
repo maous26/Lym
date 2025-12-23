@@ -1,10 +1,40 @@
 'use server';
 
+import { put } from '@vercel/blob';
 import { models, isAIAvailable } from '@/lib/ai/config';
 import { COACH_SYSTEM_PROMPT, MEAL_PLANNER_SYSTEM_PROMPT, MEAL_TYPE_GUIDELINES, IMAGE_GENERATION_PROMPT_TEMPLATE } from '@/lib/ai/prompts';
 import { generateUserProfileContext } from '@/lib/ai/user-context';
 import type { UserProfile } from '@/types/user';
 import type { NutritionInfo } from '@/types/meal';
+
+/**
+ * Upload image to permanent storage (Vercel Blob)
+ * Downloads the temporary URL and stores it permanently
+ */
+async function uploadImageToStorage(tempUrl: string, filename: string): Promise<string | null> {
+    try {
+        // Download the image from the temporary URL
+        const imageResponse = await fetch(tempUrl);
+        if (!imageResponse.ok) {
+            console.error('Failed to download image from temp URL:', imageResponse.status);
+            return null;
+        }
+
+        const imageBlob = await imageResponse.blob();
+
+        // Upload to Vercel Blob
+        const blob = await put(`recipes/${filename}.png`, imageBlob, {
+            access: 'public',
+            contentType: 'image/png',
+        });
+
+        console.log('Image uploaded to Vercel Blob:', blob.url);
+        return blob.url;
+    } catch (error) {
+        console.error('Error uploading image to storage:', error);
+        return null;
+    }
+}
 
 // Helper function to extract text from Vertex AI response
 function extractTextFromResponse(response: any): string {
@@ -254,7 +284,7 @@ Réponds UNIQUEMENT avec un JSON valide avec cette structure exacte:
 }
 
 /**
- * Generate food image using OpenAI DALL-E 3
+ * Generate food image using OpenAI DALL-E 3 and persist to permanent storage
  */
 export async function generateFoodImage(description: string): Promise<{ success: boolean; image?: string; error?: string }> {
     try {
@@ -291,15 +321,31 @@ export async function generateFoodImage(description: string): Promise<{ success:
         }
 
         const data = await response.json();
-        const imageUrl = data.data?.[0]?.url;
+        const tempImageUrl = data.data?.[0]?.url;
 
-        if (!imageUrl) {
+        if (!tempImageUrl) {
             console.error('No image URL in response:', data);
             return { success: false, error: "No image URL in response" };
         }
 
-        console.log('Image generated successfully, URL length:', imageUrl.length);
-        return { success: true, image: imageUrl };
+        console.log('Image generated successfully, persisting to storage...');
+
+        // Generate unique filename based on timestamp and description hash
+        const timestamp = Date.now();
+        const descHash = description.slice(0, 30).replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
+        const filename = `${timestamp}-${descHash}`;
+
+        // Upload to permanent storage (Vercel Blob)
+        const permanentUrl = await uploadImageToStorage(tempImageUrl, filename);
+
+        if (permanentUrl) {
+            console.log('Image persisted successfully:', permanentUrl);
+            return { success: true, image: permanentUrl };
+        } else {
+            // Fallback to temp URL if storage fails (better than nothing)
+            console.warn('Storage failed, returning temporary URL');
+            return { success: true, image: tempImageUrl };
+        }
 
     } catch (error) {
         console.error("Error in generateFoodImage:", error);
