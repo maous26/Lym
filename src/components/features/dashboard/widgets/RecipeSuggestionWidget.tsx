@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { Clock, Users, ChefHat, Heart, Sparkles, ArrowRight } from 'lucide-react';
+import { Clock, Users, ChefHat, Heart, Sparkles, ArrowRight, Star } from 'lucide-react';
 import Image from 'next/image';
 
 interface Recipe {
@@ -15,6 +15,8 @@ interface Recipe {
   tags: string[];
   matchScore: number; // 0-100
   isFavorite?: boolean;
+  averageRating?: number;
+  ratingsCount?: number;
 }
 
 interface RecipeSuggestionWidgetProps {
@@ -144,9 +146,24 @@ export function RecipeSuggestionWidget({
               </div>
 
               {/* Content */}
-              <h4 className="font-semibold text-stone-800 text-sm line-clamp-2 mb-2 group-hover:text-primary-600 transition-colors">
+              <h4 className="font-semibold text-stone-800 text-sm line-clamp-2 mb-1 group-hover:text-primary-600 transition-colors">
                 {recipe.name}
               </h4>
+
+              {/* Rating */}
+              {recipe.averageRating !== undefined && recipe.averageRating > 0 && (
+                <div className="flex items-center gap-1 mb-1">
+                  <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                  <span className="text-xs font-medium text-stone-700">
+                    {recipe.averageRating.toFixed(1)}
+                  </span>
+                  {recipe.ratingsCount !== undefined && recipe.ratingsCount > 0 && (
+                    <span className="text-xs text-stone-400">
+                      ({recipe.ratingsCount})
+                    </span>
+                  )}
+                </div>
+              )}
 
               {/* Meta */}
               <div className="flex items-center gap-3 text-xs text-stone-500">
