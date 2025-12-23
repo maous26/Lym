@@ -10,11 +10,13 @@ import { BottomNav } from '@/components/ui/BottomNav';
 import {
   WelcomeWidget,
   NutritionRingWidget,
+  PlaisirCreditWidget,
   TodayMealsWidget,
   CoachInsightWidget,
   RecipeSuggestionWidget,
   HydrationWidget,
 } from '@/components/features/dashboard/widgets';
+import { usePlaisirCredit } from '@/hooks/usePlaisirCredit';
 import { useMealStore } from '@/store/meal-store';
 import { WeightTracker, WeightTrackerRef } from '@/components/features/weight/WeightTracker';
 import { ConnectedDevices } from '@/components/features/weight/ConnectedDevices';
@@ -31,6 +33,7 @@ export default function HomePage() {
   const activeMode = useActiveMode();
   const todayMeals = useTodayMeals();
   const { meals } = useMealStore();
+  const plaisirCredit = usePlaisirCredit();
 
   // Ref for WeightTracker to refresh after sync
   const weightTrackerRef = useRef<WeightTrackerRef>(null);
@@ -143,6 +146,10 @@ export default function HomePage() {
     setHydration((prev) => Math.max(prev - amount, 0));
   };
 
+  const handlePlanPleasureMeal = () => {
+    router.push('/meals/add?tab=recipes&filter=plaisir');
+  };
+
   // Handle recipe submission success
   const handleRecipeSubmitSuccess = (recipe: any, xpEarned: number) => {
     setXpToast({ show: true, amount: xpEarned, reason: 'Recette soumise' });
@@ -250,6 +257,19 @@ export default function HomePage() {
             carbs={{ current: currentCarbs, target: targetCarbs }}
             fats={{ current: currentFats, target: targetFats }}
             onViewDetails={() => router.push('/nutrition')}
+          />
+        </section>
+
+        {/* Plaisir Credit Widget */}
+        <section className="mt-6">
+          <PlaisirCreditWidget
+            currentCredit={plaisirCredit.currentCredit}
+            creditRequired={plaisirCredit.creditRequired}
+            weeklyHistory={plaisirCredit.weeklyHistory}
+            isReady={plaisirCredit.isReady}
+            percentageFilled={plaisirCredit.percentageFilled}
+            message={plaisirCredit.message}
+            onPlanPleasureMeal={handlePlanPleasureMeal}
           />
         </section>
 

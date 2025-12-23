@@ -1,5 +1,6 @@
 export { WelcomeWidget } from './WelcomeWidget';
 export { NutritionRingWidget } from './NutritionRingWidget';
+export { PlaisirCreditWidget } from './PlaisirCreditWidget';
 export { TodayMealsWidget } from './TodayMealsWidget';
 export { QuickActionsWidget } from './QuickActionsWidget';
 export { CoachInsightWidget } from './CoachInsightWidget';
