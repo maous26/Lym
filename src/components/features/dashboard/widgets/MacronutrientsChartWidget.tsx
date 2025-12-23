@@ -3,7 +3,6 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { ChevronRight } from 'lucide-react';
 
 type TimeRange = '7days' | '30days' | '90days' | '1year' | 'all';
 
@@ -29,22 +28,22 @@ const TIME_RANGE_LABELS: Record<TimeRange, string> = {
   'all': 'Tout',
 };
 
-// Couleurs des macros (comme sur la capture)
+// Couleurs des macros
 const MACRO_COLORS = {
   proteins: '#EC4899', // Rose/Pink
   carbs: '#3B82F6',    // Bleu
   fats: '#22C55E',     // Vert
 };
 
+// Labels en français
 const MACRO_LABELS = {
-  proteins: 'Protein',
-  carbs: 'Carbs',
-  fats: 'Fat',
+  proteins: 'Protéines',
+  carbs: 'Glucides',
+  fats: 'Lipides',
 };
 
 export function MacronutrientsChartWidget({
   data,
-  onViewDetails,
   className,
 }: MacronutrientsChartWidgetProps) {
   const [selectedRange, setSelectedRange] = useState<TimeRange>('30days');
@@ -79,13 +78,16 @@ export function MacronutrientsChartWidget({
     return data.filter((d) => new Date(d.date) >= cutoffDate);
   }, [data, selectedRange]);
 
-  // Calculer les moyennes
+  // Calculer les moyennes - seulement sur les jours avec des données
   const averages = useMemo(() => {
-    if (filteredData.length === 0) {
+    // Filtrer uniquement les jours avec des calories > 0
+    const daysWithData = filteredData.filter((d) => d.calories > 0);
+
+    if (daysWithData.length === 0) {
       return { proteins: 0, carbs: 0, fats: 0, calories: 0 };
     }
 
-    const totals = filteredData.reduce(
+    const totals = daysWithData.reduce(
       (acc, d) => ({
         proteins: acc.proteins + d.proteins,
         carbs: acc.carbs + d.carbs,
@@ -96,10 +98,10 @@ export function MacronutrientsChartWidget({
     );
 
     return {
-      proteins: Math.round(totals.proteins / filteredData.length),
-      carbs: Math.round(totals.carbs / filteredData.length),
-      fats: Math.round(totals.fats / filteredData.length),
-      calories: Math.round(totals.calories / filteredData.length),
+      proteins: Math.round(totals.proteins / daysWithData.length),
+      carbs: Math.round(totals.carbs / daysWithData.length),
+      fats: Math.round(totals.fats / daysWithData.length),
+      calories: Math.round(totals.calories / daysWithData.length),
     };
   }, [filteredData]);
 
@@ -121,12 +123,9 @@ export function MacronutrientsChartWidget({
 
   // Calculer la hauteur max pour l'échelle
   const maxCalories = useMemo(() => {
-    if (filteredData.length === 0) return 2500;
-    return Math.max(...filteredData.map((d) => d.calories), 2500);
+    const maxFromData = Math.max(...filteredData.map((d) => d.calories), 0);
+    return maxFromData > 0 ? maxFromData : 2500;
   }, [filteredData]);
-
-  // Dernier jour pour le Nutrition Log
-  const lastDay = filteredData.length > 0 ? filteredData[filteredData.length - 1] : null;
 
   return (
     <motion.div
@@ -134,74 +133,51 @@ export function MacronutrientsChartWidget({
       animate={{ opacity: 1, y: 0 }}
       className={cn('bg-white rounded-3xl shadow-card overflow-hidden', className)}
     >
-      {/* Header bleu */}
-      <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-4 py-3">
-        <div className="flex items-center justify-between">
-          <button
-            onClick={onViewDetails}
-            className="text-white/80 text-sm flex items-center gap-1"
-          >
-            &lt; Retour
-          </button>
-          <h2 className="text-white font-semibold text-lg">Macronutriments</h2>
-          <div className="w-16" /> {/* Spacer */}
-        </div>
+      {/* Header bleu pastel */}
+      <div className="bg-gradient-to-r from-blue-100 to-blue-200 px-4 py-3">
+        <h2 className="text-blue-800 font-semibold text-lg text-center">Macronutriments</h2>
       </div>
 
-      {/* Légende des macros et moyennes */}
+      {/* Légende des macros */}
       <div className="px-4 pt-4 pb-2">
-        <div className="flex items-center justify-between">
-          <span className="text-stone-500 font-medium">MOY.</span>
-          <div className="flex items-center gap-4">
-            {/* Protein */}
-            <div className="flex items-center gap-2">
-              <span
-                className="px-3 py-1 rounded-full text-xs font-semibold text-white"
-                style={{ backgroundColor: MACRO_COLORS.proteins }}
-              >
-                {MACRO_LABELS.proteins}
-              </span>
-            </div>
-            {/* Carbs */}
-            <div className="flex items-center gap-2">
-              <span
-                className="px-3 py-1 rounded-full text-xs font-semibold text-white"
-                style={{ backgroundColor: MACRO_COLORS.carbs }}
-              >
-                {MACRO_LABELS.carbs}
-              </span>
-            </div>
-            {/* Fat */}
-            <div className="flex items-center gap-2">
-              <span
-                className="px-3 py-1 rounded-full text-xs font-semibold text-white"
-                style={{ backgroundColor: MACRO_COLORS.fats }}
-              >
-                {MACRO_LABELS.fats}
-              </span>
-            </div>
-            {/* kCal */}
-            <div className="flex items-center gap-2">
-              <span className="px-3 py-1 rounded-full text-xs font-semibold text-white bg-orange-400">
-                kCal
-              </span>
-            </div>
-          </div>
+        <div className="flex items-center justify-center gap-3">
+          {/* Protéines */}
+          <span
+            className="px-3 py-1 rounded-full text-xs font-semibold text-white"
+            style={{ backgroundColor: MACRO_COLORS.proteins }}
+          >
+            {MACRO_LABELS.proteins}
+          </span>
+          {/* Glucides */}
+          <span
+            className="px-3 py-1 rounded-full text-xs font-semibold text-white"
+            style={{ backgroundColor: MACRO_COLORS.carbs }}
+          >
+            {MACRO_LABELS.carbs}
+          </span>
+          {/* Lipides */}
+          <span
+            className="px-3 py-1 rounded-full text-xs font-semibold text-white"
+            style={{ backgroundColor: MACRO_COLORS.fats }}
+          >
+            {MACRO_LABELS.fats}
+          </span>
+          {/* kCal */}
+          <span className="px-3 py-1 rounded-full text-xs font-semibold text-white bg-orange-400">
+            kCal
+          </span>
         </div>
 
         {/* Valeurs moyennes */}
-        <div className="flex items-center justify-between mt-2">
-          <span className="text-stone-400 text-sm"></span>
-          <div className="flex items-center gap-4 text-sm font-bold">
-            <span style={{ color: MACRO_COLORS.proteins }}>{averages.proteins} g</span>
-            <span style={{ color: MACRO_COLORS.carbs }}>{averages.carbs} g</span>
-            <span style={{ color: MACRO_COLORS.fats }}>{averages.fats} g</span>
-            <span className="text-orange-500">{averages.calories} kCal</span>
-          </div>
+        <div className="flex items-center justify-center gap-4 mt-3 text-sm font-bold">
+          <span style={{ color: MACRO_COLORS.proteins }}>{averages.proteins} g</span>
+          <span style={{ color: MACRO_COLORS.carbs }}>{averages.carbs} g</span>
+          <span style={{ color: MACRO_COLORS.fats }}>{averages.fats} g</span>
+          <span className="text-orange-500">{averages.calories} kCal</span>
         </div>
 
         {/* Plage de dates */}
-        <div className="mt-3 text-stone-600 font-medium text-sm">{dateRange}</div>
+        <div className="mt-3 text-stone-600 font-medium text-sm text-center">{dateRange}</div>
       </div>
 
       {/* Graphique en barres */}
@@ -224,6 +200,17 @@ export function MacronutrientsChartWidget({
           {/* Barres */}
           <div className="absolute inset-0 flex items-end justify-around pr-10">
             {filteredData.slice(-30).map((day, index) => {
+              // Ne pas afficher de barre si pas de calories
+              if (day.calories === 0) {
+                return (
+                  <div
+                    key={day.date}
+                    className="w-2"
+                    style={{ minWidth: '4px', maxWidth: '12px' }}
+                  />
+                );
+              }
+
               const totalHeight = (day.calories / maxCalories) * 100;
               const proteinHeight = (day.proteins * 4 / day.calories) * totalHeight || 0;
               const carbsHeight = (day.carbs * 4 / day.calories) * totalHeight || 0;
@@ -238,21 +225,21 @@ export function MacronutrientsChartWidget({
                   className="w-2 flex flex-col-reverse rounded-t overflow-hidden"
                   style={{ minWidth: '4px', maxWidth: '12px' }}
                 >
-                  {/* Fats (vert) - en bas */}
+                  {/* Lipides (vert) - en bas */}
                   <div
                     style={{
                       height: `${fatsHeight}%`,
                       backgroundColor: MACRO_COLORS.fats,
                     }}
                   />
-                  {/* Carbs (bleu) - au milieu */}
+                  {/* Glucides (bleu) - au milieu */}
                   <div
                     style={{
                       height: `${carbsHeight}%`,
                       backgroundColor: MACRO_COLORS.carbs,
                     }}
                   />
-                  {/* Proteins (rose) - en haut */}
+                  {/* Protéines (rose) - en haut */}
                   <div
                     style={{
                       height: `${proteinHeight}%`,
@@ -300,70 +287,6 @@ export function MacronutrientsChartWidget({
           </button>
         ))}
       </div>
-
-      {/* Nutrition Log - Dernier jour */}
-      {lastDay && (
-        <div className="px-4 py-4 border-t border-stone-100">
-          <h3 className="font-bold text-stone-900 text-lg mb-3">Nutrition Log</h3>
-          <button
-            onClick={onViewDetails}
-            className="w-full flex items-center justify-between py-2 hover:bg-stone-50 rounded-lg transition-colors"
-          >
-            <div className="flex flex-col items-start">
-              <span className="text-stone-500 text-sm">
-                {new Date(lastDay.date).toLocaleDateString('fr-FR', {
-                  weekday: 'short',
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric',
-                })}
-              </span>
-              <div className="flex items-center gap-4 mt-1">
-                <span className="flex items-center gap-1">
-                  <span
-                    className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
-                    style={{ backgroundColor: MACRO_COLORS.proteins }}
-                  >
-                    P
-                  </span>
-                  <span style={{ color: MACRO_COLORS.proteins }} className="font-semibold">
-                    {lastDay.proteins}
-                  </span>
-                </span>
-                <span className="flex items-center gap-1">
-                  <span
-                    className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
-                    style={{ backgroundColor: MACRO_COLORS.carbs }}
-                  >
-                    C
-                  </span>
-                  <span style={{ color: MACRO_COLORS.carbs }} className="font-semibold">
-                    {lastDay.carbs}
-                  </span>
-                </span>
-                <span className="flex items-center gap-1">
-                  <span
-                    className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
-                    style={{ backgroundColor: MACRO_COLORS.fats }}
-                  >
-                    F
-                  </span>
-                  <span style={{ color: MACRO_COLORS.fats }} className="font-semibold">
-                    {lastDay.fats}
-                  </span>
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white bg-orange-400">
-
-                  </span>
-                  <span className="text-orange-500 font-semibold">{lastDay.calories}</span>
-                </span>
-              </div>
-            </div>
-            <ChevronRight className="w-5 h-5 text-stone-400" />
-          </button>
-        </div>
-      )}
     </motion.div>
   );
 }
