@@ -41,8 +41,8 @@ type InputTab = 'search' | 'voice' | 'ai' | 'photo' | 'barcode' | 'recipes';
 
 // Tab configuration with colors
 const TABS: { id: InputTab; label: string; icon: React.ElementType; color: string; bgColor: string; activeColor: string; activeBorder: string }[] = [
-  { id: 'recipes', label: 'Vos recettes', icon: Users, color: 'text-indigo-600', bgColor: 'bg-indigo-50', activeColor: 'bg-indigo-100', activeBorder: 'ring-2 ring-indigo-400' },
   { id: 'search', label: 'Recherche', icon: Search, color: 'text-blue-600', bgColor: 'bg-blue-50', activeColor: 'bg-blue-100', activeBorder: 'ring-2 ring-blue-400' },
+  { id: 'recipes', label: 'Vos recettes', icon: Users, color: 'text-indigo-600', bgColor: 'bg-indigo-50', activeColor: 'bg-indigo-100', activeBorder: 'ring-2 ring-indigo-400' },
   { id: 'voice', label: 'Vocal', icon: Mic, color: 'text-purple-600', bgColor: 'bg-purple-50', activeColor: 'bg-purple-100', activeBorder: 'ring-2 ring-purple-400' },
   { id: 'ai', label: 'IA', icon: Sparkles, color: 'text-amber-600', bgColor: 'bg-amber-50', activeColor: 'bg-amber-100', activeBorder: 'ring-2 ring-amber-400' },
   { id: 'photo', label: 'Photo', icon: Camera, color: 'text-rose-600', bgColor: 'bg-rose-50', activeColor: 'bg-rose-100', activeBorder: 'ring-2 ring-rose-400' },
@@ -63,7 +63,6 @@ interface CommunityRecipe {
   servings: number;
   averageRating: number;
   ratingsCount: number;
-  videoPlatform: string | null;
   author: { id: string; name: string | null; image: string | null } | null;
   tags: string[];
 }
@@ -85,7 +84,7 @@ function AddMealContent() {
   const date = searchParams.get('date') || new Date().toISOString().split('T')[0];
 
   // Local state
-  const [activeTab, setActiveTab] = useState<InputTab>('recipes');
+  const [activeTab, setActiveTab] = useState<InputTab>('search');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [addedItems, setAddedItems] = useState<MealItem[]>([]);
   const [communityRecipes, setCommunityRecipes] = useState<CommunityRecipe[]>([]);

@@ -6,7 +6,6 @@ import {
     ChevronDown,
     ChevronUp,
     Youtube,
-    Instagram,
     Link,
     Loader2,
     Check,
@@ -46,7 +45,7 @@ interface ExtractedRecipe {
     difficulty: string;
     tags: string[];
     videoInfo: {
-        platform: 'youtube' | 'instagram' | 'tiktok';
+        platform: 'youtube';
         videoId: string;
         url: string;
     };
@@ -67,10 +66,8 @@ export function SubmitRecipeWidget({ onSuccess }: SubmitRecipeWidgetProps) {
     const [editedRecipe, setEditedRecipe] = useState<ExtractedRecipe | null>(null);
     const [success, setSuccess] = useState<{ recipe: any; xpEarned: number } | null>(null);
 
-    const detectPlatform = (url: string): 'youtube' | 'instagram' | 'tiktok' | null => {
+    const detectPlatform = (url: string): 'youtube' | null => {
         if (url.includes('youtube.com') || url.includes('youtu.be')) return 'youtube';
-        if (url.includes('instagram.com')) return 'instagram';
-        if (url.includes('tiktok.com')) return 'tiktok';
         return null;
     };
 
@@ -195,7 +192,7 @@ export function SubmitRecipeWidget({ onSuccess }: SubmitRecipeWidgetProps) {
                         <div>
                             <h3 className="font-bold text-lg">Proposez vos recettes</h3>
                             <p className="text-white/80 text-sm">
-                                YouTube, Instagram, TikTok
+                                Partagez vos recettes YouTube
                             </p>
                         </div>
                     </div>
@@ -231,7 +228,7 @@ export function SubmitRecipeWidget({ onSuccess }: SubmitRecipeWidgetProps) {
                                         les ingrédients, les étapes et calculer les calories !
                                     </p>
 
-                                    {/* Platform icons */}
+                                    {/* Platform icon */}
                                     <div className="flex items-center gap-3 mb-4">
                                         <div
                                             className={`p-2 rounded-lg transition-colors ${
@@ -242,26 +239,9 @@ export function SubmitRecipeWidget({ onSuccess }: SubmitRecipeWidgetProps) {
                                         >
                                             <Youtube className="w-5 h-5" />
                                         </div>
-                                        <div
-                                            className={`p-2 rounded-lg transition-colors ${
-                                                platform === 'instagram'
-                                                    ? 'bg-pink-100 text-pink-600'
-                                                    : 'bg-gray-100 text-gray-400'
-                                            }`}
-                                        >
-                                            <Instagram className="w-5 h-5" />
-                                        </div>
-                                        <div
-                                            className={`p-2 rounded-lg transition-colors ${
-                                                platform === 'tiktok'
-                                                    ? 'bg-gray-900 text-white'
-                                                    : 'bg-gray-100 text-gray-400'
-                                            }`}
-                                        >
-                                            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                                                <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-5.2 1.74 2.89 2.89 0 012.31-4.64 2.93 2.93 0 01.88.13V9.4a6.84 6.84 0 00-1-.05A6.33 6.33 0 005 20.1a6.34 6.34 0 0010.86-4.43v-7a8.16 8.16 0 004.77 1.52v-3.4a4.85 4.85 0 01-1-.1z" />
-                                            </svg>
-                                        </div>
+                                        <span className="text-sm text-gray-500">
+                                            Collez un lien YouTube de recette
+                                        </span>
                                     </div>
 
                                     {/* URL input */}

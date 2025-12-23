@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { useSoloProfile, useActiveMode, useIsHydrated } from '@/store/user-store';
+import { getSuggestedRecipes, type SuggestedRecipe } from '@/app/actions/recipe-suggestions';
 import { useTodayMeals } from '@/store/meal-store';
 import { BottomNav } from '@/components/ui/BottomNav';
 import {
@@ -22,18 +23,7 @@ import { SubmitRecipeWidget } from '@/components/features/recipes';
 import { XpToast } from '@/components/features/gamification';
 import { ChevronDown, ChevronUp, Scale, Bluetooth } from 'lucide-react';
 
-// Types for widget data
-interface Recipe {
-  id: string;
-  name: string;
-  imageUrl: string;
-  prepTime: number;
-  servings: number;
-  calories: number;
-  tags: string[];
-  matchScore: number;
-  isFavorite?: boolean;
-}
+// Recipe type is now imported from recipe-suggestions action
 
 export default function HomePage() {
   const router = useRouter();
@@ -69,6 +59,39 @@ export default function HomePage() {
 
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
 
+  // Dynamic recipe suggestions
+  const [suggestedRecipes, setSuggestedRecipes] = useState<SuggestedRecipe[]>([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+
+  // Load suggested recipes
+  useEffect(() => {
+    const loadSuggestions = async () => {
+      if (!isHydrated) return;
+
+      setSuggestionsLoading(true);
+      const result = await getSuggestedRecipes(
+        soloProfile ? {
+          id: soloProfile.id,
+          goal: soloProfile.goal,
+          dietType: soloProfile.dietType,
+          allergies: soloProfile.allergies,
+          intolerances: soloProfile.intolerances,
+          dislikedFoods: soloProfile.dislikedFoods,
+          cookingTimeWeekday: soloProfile.cookingTimeWeekday,
+          dailyCaloriesTarget: soloProfile.dailyCaloriesTarget,
+        } : null,
+        6
+      );
+
+      if (result.success) {
+        setSuggestedRecipes(result.recipes);
+      }
+      setSuggestionsLoading(false);
+    };
+
+    loadSuggestions();
+  }, [isHydrated, soloProfile]);
+
   // Get greeting based on time
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -76,42 +99,6 @@ export default function HomePage() {
     if (hour < 18) return 'Bon après-midi';
     return 'Bonsoir';
   };
-
-  const suggestedRecipes: Recipe[] = [
-    {
-      id: '1',
-      name: 'Buddha Bowl Quinoa & Légumes Grillés',
-      imageUrl: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=400',
-      prepTime: 25,
-      servings: 2,
-      calories: 420,
-      tags: ['Végétarien', 'Healthy'],
-      matchScore: 95,
-      isFavorite: false,
-    },
-    {
-      id: '2',
-      name: 'Saumon Teriyaki aux Brocolis',
-      imageUrl: 'https://images.unsplash.com/photo-1467003909585-2f8a72700288?w=400',
-      prepTime: 30,
-      servings: 2,
-      calories: 480,
-      tags: ['Protéines', 'Oméga-3'],
-      matchScore: 88,
-      isFavorite: true,
-    },
-    {
-      id: '3',
-      name: 'Poulet Citron Romarin',
-      imageUrl: 'https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?w=400',
-      prepTime: 40,
-      servings: 4,
-      calories: 350,
-      tags: ['Protéines', 'Low-carb'],
-      matchScore: 82,
-      isFavorite: false,
-    },
-  ];
 
   const coachInsights = [
     {
@@ -277,11 +264,6 @@ export default function HomePage() {
           />
         </section>
 
-        {/* Submit Recipe Widget */}
-        <section className="mt-6">
-          <SubmitRecipeWidget onSuccess={handleRecipeSubmitSuccess} />
-        </section>
-
         {/* Coach Insight */}
         <section className="mt-6">
           <AnimatePresence>
@@ -315,8 +297,13 @@ export default function HomePage() {
             }))}
             onRecipeClick={handleRecipeClick}
             onToggleFavorite={handleToggleFavorite}
-            onSeeAll={() => router.push('/recipes')}
+            onSeeAll={() => router.push('/meals/add?tab=recipes')}
           />
+        </section>
+
+        {/* Submit Recipe Widget */}
+        <section className="mt-6">
+          <SubmitRecipeWidget onSuccess={handleRecipeSubmitSuccess} />
         </section>
 
         {/* Progress Widget - Collapsible */}
