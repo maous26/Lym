@@ -88,8 +88,9 @@ export function BottomNav({ variant = 'solo', className }: BottomNavProps) {
                 />
               )}
 
-              {/* Icon */}
+              {/* Icon with notification dot */}
               <motion.div
+                className="relative"
                 animate={{
                   scale: isActive ? 1.1 : 1,
                   y: isActive ? -2 : 0
@@ -102,6 +103,10 @@ export function BottomNav({ variant = 'solo', className }: BottomNavProps) {
                     isActive ? 'text-primary-500' : 'text-stone-400 group-hover:text-stone-600'
                   )}
                 />
+                {/* Notification dot - like SMS/iMessage style */}
+                {item.badge && item.badge > 0 && (
+                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />
+                )}
               </motion.div>
 
               {/* Label */}
@@ -113,13 +118,6 @@ export function BottomNav({ variant = 'solo', className }: BottomNavProps) {
               >
                 {item.label}
               </span>
-
-              {/* Badge */}
-              {item.badge && item.badge > 0 && (
-                <span className="absolute top-1 right-1/4 w-4 h-4 flex items-center justify-center text-[10px] font-bold bg-red-500 text-white rounded-full">
-                  {item.badge > 9 ? '9+' : item.badge}
-                </span>
-              )}
             </Link>
           );
         })}
