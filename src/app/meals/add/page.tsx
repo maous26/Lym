@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, Suspense } from 'react';
+import { useState, useCallback, Suspense, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -14,6 +14,12 @@ import {
   X,
   ShoppingBag,
   Users,
+  Star,
+  Clock,
+  Flame,
+  MessageCircle,
+  Loader2,
+  Plus,
 } from 'lucide-react';
 import { SearchBar } from '@/components/features/search/SearchBar';
 import { SearchResults } from '@/components/features/search/SearchResults';
@@ -28,19 +34,39 @@ import { useUserStore, useSoloProfile } from '@/store/user-store';
 import type { Product } from '@/types/product';
 import type { MealType, FoodItem, MealItem, NutritionInfo } from '@/types/meal';
 import type { MeasurementUnit } from '@/lib/unit-utils';
+import { getCommunityRecipes } from '@/app/actions/social-recipe';
 
 // Tab types
 type InputTab = 'search' | 'voice' | 'ai' | 'photo' | 'barcode' | 'recipes';
 
 // Tab configuration with colors
-const TABS: { id: InputTab; label: string; icon: React.ElementType; color: string; bgColor: string; activeColor: string }[] = [
-  { id: 'search', label: 'Recherche', icon: Search, color: 'text-blue-600', bgColor: 'bg-blue-50', activeColor: 'bg-blue-100' },
-  { id: 'voice', label: 'Vocal', icon: Mic, color: 'text-purple-600', bgColor: 'bg-purple-50', activeColor: 'bg-purple-100' },
-  { id: 'ai', label: 'IA', icon: Sparkles, color: 'text-amber-600', bgColor: 'bg-amber-50', activeColor: 'bg-amber-100' },
-  { id: 'photo', label: 'Photo', icon: Camera, color: 'text-rose-600', bgColor: 'bg-rose-50', activeColor: 'bg-rose-100' },
-  { id: 'barcode', label: 'Code-barres', icon: Barcode, color: 'text-emerald-600', bgColor: 'bg-emerald-50', activeColor: 'bg-emerald-100' },
-  { id: 'recipes', label: 'Recettes', icon: Users, color: 'text-indigo-600', bgColor: 'bg-indigo-50', activeColor: 'bg-indigo-100' },
+const TABS: { id: InputTab; label: string; icon: React.ElementType; color: string; bgColor: string; activeColor: string; activeBorder: string }[] = [
+  { id: 'recipes', label: 'Vos recettes', icon: Users, color: 'text-indigo-600', bgColor: 'bg-indigo-50', activeColor: 'bg-indigo-100', activeBorder: 'ring-2 ring-indigo-400' },
+  { id: 'search', label: 'Recherche', icon: Search, color: 'text-blue-600', bgColor: 'bg-blue-50', activeColor: 'bg-blue-100', activeBorder: 'ring-2 ring-blue-400' },
+  { id: 'voice', label: 'Vocal', icon: Mic, color: 'text-purple-600', bgColor: 'bg-purple-50', activeColor: 'bg-purple-100', activeBorder: 'ring-2 ring-purple-400' },
+  { id: 'ai', label: 'IA', icon: Sparkles, color: 'text-amber-600', bgColor: 'bg-amber-50', activeColor: 'bg-amber-100', activeBorder: 'ring-2 ring-amber-400' },
+  { id: 'photo', label: 'Photo', icon: Camera, color: 'text-rose-600', bgColor: 'bg-rose-50', activeColor: 'bg-rose-100', activeBorder: 'ring-2 ring-rose-400' },
+  { id: 'barcode', label: 'Code-barres', icon: Barcode, color: 'text-emerald-600', bgColor: 'bg-emerald-50', activeColor: 'bg-emerald-100', activeBorder: 'ring-2 ring-emerald-400' },
 ];
+
+// Community recipe type
+interface CommunityRecipe {
+  id: string;
+  title: string;
+  description: string | null;
+  imageUrl: string | null;
+  calories: number;
+  proteins: number;
+  carbs: number;
+  fats: number;
+  prepTime: number;
+  servings: number;
+  averageRating: number;
+  ratingsCount: number;
+  videoPlatform: string | null;
+  author: { id: string; name: string | null; image: string | null } | null;
+  tags: string[];
+}
 
 // Meal type labels
 const MEAL_TYPE_LABELS: Record<MealType, string> = {
@@ -59,9 +85,24 @@ function AddMealContent() {
   const date = searchParams.get('date') || new Date().toISOString().split('T')[0];
 
   // Local state
-  const [activeTab, setActiveTab] = useState<InputTab>('search');
+  const [activeTab, setActiveTab] = useState<InputTab>('recipes');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [addedItems, setAddedItems] = useState<MealItem[]>([]);
+  const [communityRecipes, setCommunityRecipes] = useState<CommunityRecipe[]>([]);
+  const [recipesLoading, setRecipesLoading] = useState(false);
+
+  // Load community recipes
+  useEffect(() => {
+    const loadRecipes = async () => {
+      setRecipesLoading(true);
+      const result = await getCommunityRecipes({ limit: 20 });
+      if (result.success && result.recipes) {
+        setCommunityRecipes(result.recipes as CommunityRecipe[]);
+      }
+      setRecipesLoading(false);
+    };
+    loadRecipes();
+  }, []);
 
   // Search store
   const query = useSearchStore((state) => state.query);
@@ -201,17 +242,17 @@ function AddMealContent() {
 
         {/* Tabs */}
         <div className="flex px-4 gap-1.5 pb-3 overflow-x-auto">
-          {TABS.map(({ id, label, icon: Icon, color, bgColor, activeColor }) => (
+          {TABS.map(({ id, label, icon: Icon, color, bgColor, activeColor, activeBorder }) => (
             <motion.button
               key={id}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => setActiveTab(id)}
               className={cn(
-                'flex-1 min-w-[56px] flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl text-sm font-medium transition-colors',
+                'flex-1 min-w-[56px] flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl text-sm font-medium transition-all',
                 activeTab === id
-                  ? `${activeColor} ${color}`
-                  : `${bgColor} ${color} opacity-70 hover:opacity-100`
+                  ? `${activeColor} ${color} ${activeBorder} shadow-sm`
+                  : `${bgColor} ${color} opacity-60 hover:opacity-100`
               )}
             >
               <Icon className="w-4 h-4" />
@@ -371,25 +412,135 @@ function AddMealContent() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="text-center py-12"
+              className="space-y-4"
             >
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center mx-auto mb-4">
-                <Users className="w-8 h-8 text-indigo-600" />
+              {/* Header */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Users className="w-5 h-5 text-indigo-600" />
+                  <h3 className="font-bold text-stone-800">Vos recettes</h3>
+                </div>
+                <span className="text-xs text-stone-500">
+                  {communityRecipes.length} recettes
+                </span>
               </div>
-              <h3 className="font-semibold text-stone-700 mb-2">
-                Vos recettes
-              </h3>
-              <p className="text-sm text-stone-500 max-w-xs mx-auto">
-                Parcourez les recettes de la communaute et ajoutez-les a votre repas.
-              </p>
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => router.push('/meals?tab=recipes')}
-                className="mt-4 px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-medium"
-              >
-                Voir les recettes
-              </motion.button>
+
+              {/* Loading state */}
+              {recipesLoading && (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+                </div>
+              )}
+
+              {/* Empty state */}
+              {!recipesLoading && communityRecipes.length === 0 && (
+                <div className="text-center py-12 bg-white rounded-2xl">
+                  <Users className="w-12 h-12 text-stone-300 mx-auto mb-3" />
+                  <p className="text-stone-600 font-medium">Aucune recette pour le moment</p>
+                  <p className="text-stone-400 text-sm mt-1">
+                    Proposez vos recettes depuis la page d'accueil !
+                  </p>
+                </div>
+              )}
+
+              {/* Recipe cards */}
+              {!recipesLoading && communityRecipes.length > 0 && (
+                <div className="space-y-3">
+                  {communityRecipes.map((recipe) => (
+                    <motion.div
+                      key={recipe.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="bg-white rounded-2xl overflow-hidden shadow-sm border border-stone-100"
+                    >
+                      <div className="flex">
+                        {/* Image */}
+                        <div
+                          className="w-24 h-24 flex-shrink-0 bg-cover bg-center bg-gradient-to-br from-indigo-100 to-purple-100"
+                          style={{
+                            backgroundImage: recipe.imageUrl
+                              ? `url(${recipe.imageUrl})`
+                              : undefined,
+                          }}
+                        />
+
+                        {/* Content */}
+                        <div className="flex-1 p-3">
+                          <h4 className="font-bold text-stone-900 text-sm line-clamp-1">
+                            {recipe.title}
+                          </h4>
+
+                          {/* Author */}
+                          {recipe.author && (
+                            <p className="text-xs text-stone-400 mt-0.5">
+                              par {recipe.author.name || 'Anonyme'}
+                            </p>
+                          )}
+
+                          {/* Stats row */}
+                          <div className="flex items-center gap-2 mt-2 text-xs text-stone-500">
+                            <span className="flex items-center gap-0.5">
+                              <Flame className="w-3 h-3 text-orange-500" />
+                              {Math.round(recipe.calories)} kcal
+                            </span>
+                            <span className="flex items-center gap-0.5">
+                              <Clock className="w-3 h-3" />
+                              {recipe.prepTime} min
+                            </span>
+                            {recipe.ratingsCount > 0 && (
+                              <span className="flex items-center gap-0.5">
+                                <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
+                                {recipe.averageRating.toFixed(1)}
+                                <span className="text-stone-400">({recipe.ratingsCount})</span>
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Actions */}
+                          <div className="flex gap-2 mt-2">
+                            <button
+                              onClick={() => router.push(`/recipes/${recipe.id}`)}
+                              className="flex-1 py-1.5 text-xs font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors flex items-center justify-center gap-1"
+                            >
+                              <MessageCircle className="w-3 h-3" />
+                              Détails
+                            </button>
+                            <button
+                              onClick={() => {
+                                // Add recipe to meal
+                                const foodItem: FoodItem = {
+                                  id: `recipe-${recipe.id}`,
+                                  name: recipe.title,
+                                  serving: recipe.servings || 1,
+                                  servingUnit: 'portion',
+                                  nutrition: {
+                                    calories: recipe.calories,
+                                    proteins: recipe.proteins,
+                                    carbs: recipe.carbs,
+                                    fats: recipe.fats,
+                                  },
+                                  source: 'ai',
+                                };
+                                const mealItem: MealItem = {
+                                  id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+                                  food: foodItem,
+                                  quantity: 1,
+                                  customServing: 1,
+                                };
+                                setAddedItems((prev) => [...prev, mealItem]);
+                              }}
+                              className="flex-1 py-1.5 text-xs font-medium text-white bg-indigo-500 rounded-lg hover:bg-indigo-600 transition-colors flex items-center justify-center gap-1"
+                            >
+                              <Plus className="w-3 h-3" />
+                              Ajouter
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
