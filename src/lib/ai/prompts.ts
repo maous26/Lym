@@ -234,7 +234,7 @@ RÈGLES ABSOLUES POUR LES RECETTES:
 
 // Image generation prompt template
 export const IMAGE_GENERATION_PROMPT_TEMPLATE = (dishDescription: string) =>
-    `Professional food photography of ${dishDescription}. High resolution, 4k, appetizing, realistic, soft natural lighting, shallow depth of field, michelin star plating. No text, no watermark.`;
+    `Realistic home-cooked food photography of ${dishDescription}. Shot on a regular kitchen table or counter, natural daylight from a window, casual everyday plating on a simple white or ceramic plate, authentic homemade appearance like a real meal someone just cooked at home. NOT a restaurant presentation, NOT stylized, NOT overly perfect. Think iPhone photo of a real home-cooked meal. Appetizing but imperfect. No text, no watermark.`;
 
 // Food photo analysis prompt for Gemini Vision
 export const FOOD_PHOTO_ANALYSIS_PROMPT = `Tu es un expert nutritionniste capable d'analyser des photos de plats et d'estimer leur contenu nutritionnel.
