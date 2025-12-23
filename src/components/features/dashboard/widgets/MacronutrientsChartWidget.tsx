@@ -3,8 +3,19 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from 'recharts';
 
 type TimeRange = '7days' | '30days' | '90days' | '1year' | 'all';
+type MacroFilter = 'all' | 'proteins' | 'carbs' | 'fats';
 
 interface DailyMacros {
   date: string;
@@ -30,16 +41,19 @@ const TIME_RANGE_LABELS: Record<TimeRange, string> = {
 
 // Couleurs des macros
 const MACRO_COLORS = {
-  proteins: '#EC4899', // Rose/Pink
-  carbs: '#3B82F6',    // Bleu
-  fats: '#22C55E',     // Vert
+  proteins: '#EC4899',
+  carbs: '#3B82F6',
+  fats: '#22C55E',
+  calories: '#F97316',
 };
 
 // Labels en français
-const MACRO_LABELS = {
+const MACRO_LABELS: Record<MacroFilter | 'calories', string> = {
+  all: 'Tous',
   proteins: 'Protéines',
   carbs: 'Glucides',
   fats: 'Lipides',
+  calories: 'kCal',
 };
 
 export function MacronutrientsChartWidget({
@@ -47,6 +61,7 @@ export function MacronutrientsChartWidget({
   className,
 }: MacronutrientsChartWidgetProps) {
   const [selectedRange, setSelectedRange] = useState<TimeRange>('30days');
+  const [selectedMacro, setSelectedMacro] = useState<MacroFilter>('all');
 
   // Filtrer les données selon la période sélectionnée
   const filteredData = useMemo(() => {
@@ -78,9 +93,17 @@ export function MacronutrientsChartWidget({
     return data.filter((d) => new Date(d.date) >= cutoffDate);
   }, [data, selectedRange]);
 
+  // Formater les données pour Recharts
+  const chartData = useMemo(() => {
+    return filteredData.map((d) => ({
+      ...d,
+      date: new Date(d.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }),
+      fullDate: d.date,
+    }));
+  }, [filteredData]);
+
   // Calculer les moyennes - seulement sur les jours avec des données
   const averages = useMemo(() => {
-    // Filtrer uniquement les jours avec des calories > 0
     const daysWithData = filteredData.filter((d) => d.calories > 0);
 
     if (daysWithData.length === 0) {
@@ -105,27 +128,62 @@ export function MacronutrientsChartWidget({
     };
   }, [filteredData]);
 
-  // Calculer la plage de dates
-  const dateRange = useMemo(() => {
-    if (filteredData.length === 0) return '';
+  // Custom tooltip
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white p-3 rounded-lg shadow-lg border border-stone-200">
+          <p className="font-semibold text-stone-700 mb-2">{label}</p>
+          {payload.map((entry: any, index: number) => (
+            <p key={index} style={{ color: entry.color }} className="text-sm">
+              {entry.name}: <span className="font-bold">{entry.value} {entry.name === 'Calories' ? 'kcal' : 'g'}</span>
+            </p>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
 
-    const dates = filteredData.map((d) => new Date(d.date));
-    const minDate = new Date(Math.min(...dates.map((d) => d.getTime())));
-    const maxDate = new Date(Math.max(...dates.map((d) => d.getTime())));
+  // Déterminer les barres à afficher
+  const renderBars = () => {
+    if (selectedMacro === 'all') {
+      return (
+        <>
+          <Bar
+            dataKey="proteins"
+            name="Protéines"
+            fill={MACRO_COLORS.proteins}
+            stackId="stack"
+            radius={[0, 0, 0, 0]}
+          />
+          <Bar
+            dataKey="carbs"
+            name="Glucides"
+            fill={MACRO_COLORS.carbs}
+            stackId="stack"
+            radius={[0, 0, 0, 0]}
+          />
+          <Bar
+            dataKey="fats"
+            name="Lipides"
+            fill={MACRO_COLORS.fats}
+            stackId="stack"
+            radius={[4, 4, 0, 0]}
+          />
+        </>
+      );
+    }
 
-    const formatDate = (date: Date) => {
-      const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
-      return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
-    };
-
-    return `${formatDate(minDate)} - ${formatDate(maxDate)}`;
-  }, [filteredData]);
-
-  // Calculer la hauteur max pour l'échelle
-  const maxCalories = useMemo(() => {
-    const maxFromData = Math.max(...filteredData.map((d) => d.calories), 0);
-    return maxFromData > 0 ? maxFromData : 2500;
-  }, [filteredData]);
+    return (
+      <Bar
+        dataKey={selectedMacro}
+        name={MACRO_LABELS[selectedMacro]}
+        fill={MACRO_COLORS[selectedMacro]}
+        radius={[4, 4, 0, 0]}
+      />
+    );
+  };
 
   return (
     <motion.div
@@ -133,141 +191,132 @@ export function MacronutrientsChartWidget({
       animate={{ opacity: 1, y: 0 }}
       className={cn('bg-white rounded-3xl shadow-card overflow-hidden', className)}
     >
-      {/* Header bleu pastel */}
-      <div className="bg-gradient-to-r from-blue-100 to-blue-200 px-4 py-3">
-        <h2 className="text-blue-800 font-semibold text-lg text-center">Macronutriments</h2>
+      {/* Header */}
+      <div className="px-4 pt-4 pb-2">
+        <h2 className="text-lg font-bold text-stone-800">Macronutriments</h2>
       </div>
 
-      {/* Légende des macros */}
-      <div className="px-4 pt-4 pb-2">
-        <div className="flex items-center justify-center gap-3">
+      {/* Filtres macros - cliquables */}
+      <div className="px-4 pb-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {/* Protéines */}
-          <span
-            className="px-3 py-1 rounded-full text-xs font-semibold text-white"
-            style={{ backgroundColor: MACRO_COLORS.proteins }}
+          <button
+            onClick={() => setSelectedMacro(selectedMacro === 'proteins' ? 'all' : 'proteins')}
+            className={cn(
+              'px-3 py-1.5 rounded-full text-xs font-semibold transition-all',
+              selectedMacro === 'proteins'
+                ? 'ring-2 ring-offset-1 ring-pink-400 scale-105'
+                : 'opacity-80 hover:opacity-100'
+            )}
+            style={{
+              backgroundColor: MACRO_COLORS.proteins,
+              color: 'white'
+            }}
           >
             {MACRO_LABELS.proteins}
-          </span>
+          </button>
+
           {/* Glucides */}
-          <span
-            className="px-3 py-1 rounded-full text-xs font-semibold text-white"
-            style={{ backgroundColor: MACRO_COLORS.carbs }}
+          <button
+            onClick={() => setSelectedMacro(selectedMacro === 'carbs' ? 'all' : 'carbs')}
+            className={cn(
+              'px-3 py-1.5 rounded-full text-xs font-semibold transition-all',
+              selectedMacro === 'carbs'
+                ? 'ring-2 ring-offset-1 ring-blue-400 scale-105'
+                : 'opacity-80 hover:opacity-100'
+            )}
+            style={{
+              backgroundColor: MACRO_COLORS.carbs,
+              color: 'white'
+            }}
           >
             {MACRO_LABELS.carbs}
-          </span>
+          </button>
+
           {/* Lipides */}
-          <span
-            className="px-3 py-1 rounded-full text-xs font-semibold text-white"
-            style={{ backgroundColor: MACRO_COLORS.fats }}
+          <button
+            onClick={() => setSelectedMacro(selectedMacro === 'fats' ? 'all' : 'fats')}
+            className={cn(
+              'px-3 py-1.5 rounded-full text-xs font-semibold transition-all',
+              selectedMacro === 'fats'
+                ? 'ring-2 ring-offset-1 ring-green-400 scale-105'
+                : 'opacity-80 hover:opacity-100'
+            )}
+            style={{
+              backgroundColor: MACRO_COLORS.fats,
+              color: 'white'
+            }}
           >
             {MACRO_LABELS.fats}
-          </span>
-          {/* kCal */}
-          <span className="px-3 py-1 rounded-full text-xs font-semibold text-white bg-orange-400">
-            kCal
-          </span>
+          </button>
+
+          {/* kCal - affiche tous */}
+          <button
+            onClick={() => setSelectedMacro('all')}
+            className={cn(
+              'px-3 py-1.5 rounded-full text-xs font-semibold transition-all',
+              selectedMacro === 'all'
+                ? 'ring-2 ring-offset-1 ring-orange-400 scale-105'
+                : 'opacity-80 hover:opacity-100'
+            )}
+            style={{
+              backgroundColor: MACRO_COLORS.calories,
+              color: 'white'
+            }}
+          >
+            {MACRO_LABELS.calories}
+          </button>
         </div>
 
-        {/* Valeurs moyennes */}
-        <div className="flex items-center justify-center gap-4 mt-3 text-sm font-bold">
-          <span style={{ color: MACRO_COLORS.proteins }}>{averages.proteins} g</span>
-          <span style={{ color: MACRO_COLORS.carbs }}>{averages.carbs} g</span>
-          <span style={{ color: MACRO_COLORS.fats }}>{averages.fats} g</span>
-          <span className="text-orange-500">{averages.calories} kCal</span>
+        {/* Moyennes */}
+        <div className="flex items-center gap-4 mt-3 text-sm">
+          <span className="text-stone-500">Moyenne :</span>
+          {selectedMacro === 'all' || selectedMacro === 'proteins' ? (
+            <span style={{ color: MACRO_COLORS.proteins }} className="font-bold">
+              {averages.proteins}g P
+            </span>
+          ) : null}
+          {selectedMacro === 'all' || selectedMacro === 'carbs' ? (
+            <span style={{ color: MACRO_COLORS.carbs }} className="font-bold">
+              {averages.carbs}g G
+            </span>
+          ) : null}
+          {selectedMacro === 'all' || selectedMacro === 'fats' ? (
+            <span style={{ color: MACRO_COLORS.fats }} className="font-bold">
+              {averages.fats}g L
+            </span>
+          ) : null}
+          <span style={{ color: MACRO_COLORS.calories }} className="font-bold">
+            {averages.calories} kcal
+          </span>
         </div>
-
-        {/* Plage de dates */}
-        <div className="mt-3 text-stone-600 font-medium text-sm text-center">{dateRange}</div>
       </div>
 
-      {/* Graphique en barres */}
-      <div className="px-4 py-2">
-        <div className="relative h-48">
-          {/* Lignes de grille horizontales */}
-          <div className="absolute inset-0 flex flex-col justify-between">
-            {[maxCalories, maxCalories * 0.8, maxCalories * 0.6, maxCalories * 0.4, maxCalories * 0.2, 0].map(
-              (val, i) => (
-                <div key={i} className="flex items-center">
-                  <div className="flex-1 border-t border-stone-100" />
-                  <span className="text-[10px] text-stone-400 ml-1 w-8 text-right">
-                    {Math.round(val)}
-                  </span>
-                </div>
-              )
-            )}
-          </div>
-
-          {/* Barres */}
-          <div className="absolute inset-0 flex items-end justify-around pr-10">
-            {filteredData.slice(-30).map((day, index) => {
-              // Ne pas afficher de barre si pas de calories
-              if (day.calories === 0) {
-                return (
-                  <div
-                    key={day.date}
-                    className="w-2"
-                    style={{ minWidth: '4px', maxWidth: '12px' }}
-                  />
-                );
-              }
-
-              const totalHeight = (day.calories / maxCalories) * 100;
-              const proteinHeight = (day.proteins * 4 / day.calories) * totalHeight || 0;
-              const carbsHeight = (day.carbs * 4 / day.calories) * totalHeight || 0;
-              const fatsHeight = (day.fats * 9 / day.calories) * totalHeight || 0;
-
-              return (
-                <motion.div
-                  key={day.date}
-                  initial={{ height: 0 }}
-                  animate={{ height: `${totalHeight}%` }}
-                  transition={{ duration: 0.5, delay: index * 0.02 }}
-                  className="w-2 flex flex-col-reverse rounded-t overflow-hidden"
-                  style={{ minWidth: '4px', maxWidth: '12px' }}
-                >
-                  {/* Lipides (vert) - en bas */}
-                  <div
-                    style={{
-                      height: `${fatsHeight}%`,
-                      backgroundColor: MACRO_COLORS.fats,
-                    }}
-                  />
-                  {/* Glucides (bleu) - au milieu */}
-                  <div
-                    style={{
-                      height: `${carbsHeight}%`,
-                      backgroundColor: MACRO_COLORS.carbs,
-                    }}
-                  />
-                  {/* Protéines (rose) - en haut */}
-                  <div
-                    style={{
-                      height: `${proteinHeight}%`,
-                      backgroundColor: MACRO_COLORS.proteins,
-                    }}
-                  />
-                </motion.div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Labels de dates en bas */}
-        <div className="flex justify-between px-2 mt-2 text-[10px] text-stone-400">
-          {filteredData.length > 0 && (
-            <>
-              <span>
-                {new Date(filteredData[Math.floor(filteredData.length * 0.33)]?.date || '').toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' })}
-              </span>
-              <span>
-                {new Date(filteredData[Math.floor(filteredData.length * 0.66)]?.date || '').toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' })}
-              </span>
-              <span>
-                {new Date(filteredData[filteredData.length - 1]?.date || '').toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' })}
-              </span>
-            </>
-          )}
-        </div>
+      {/* Graphique Recharts */}
+      <div className="px-2 py-2">
+        <ResponsiveContainer width="100%" height={200}>
+          <BarChart
+            data={chartData}
+            margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+            <XAxis
+              dataKey="date"
+              tick={{ fontSize: 10, fill: '#9ca3af' }}
+              tickLine={false}
+              axisLine={false}
+              interval="preserveStartEnd"
+            />
+            <YAxis
+              tick={{ fontSize: 10, fill: '#9ca3af' }}
+              tickLine={false}
+              axisLine={false}
+              tickFormatter={(value) => `${value}${selectedMacro === 'all' ? 'g' : ''}`}
+            />
+            <Tooltip content={<CustomTooltip />} />
+            {renderBars()}
+          </BarChart>
+        </ResponsiveContainer>
       </div>
 
       {/* Sélecteur de période */}
@@ -279,8 +328,8 @@ export function MacronutrientsChartWidget({
             className={cn(
               'px-3 py-1.5 rounded-full text-xs font-medium transition-all',
               selectedRange === range
-                ? 'bg-stone-100 text-stone-900 border border-stone-300'
-                : 'text-blue-500 hover:bg-blue-50'
+                ? 'bg-stone-800 text-white'
+                : 'text-stone-500 hover:bg-stone-100'
             )}
           >
             {TIME_RANGE_LABELS[range]}
