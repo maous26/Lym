@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { useSoloProfile, useActiveMode, useIsHydrated } from '@/store/user-store';
@@ -10,6 +10,7 @@ import { BottomNav } from '@/components/ui/BottomNav';
 import {
   WelcomeWidget,
   NutritionRingWidget,
+  MacronutrientsChartWidget,
   PlaisirCreditWidget,
   TodayMealsWidget,
   CoachInsightWidget,
@@ -181,6 +182,38 @@ export default function HomePage() {
   const currentFats = todayMeals?.totalNutrition?.fats || 0;
   const targetFats = soloProfile?.fatTarget || 65;
 
+  // Données historiques pour le graphique des macronutriments
+  const macroChartData = useMemo(() => {
+    const data: Array<{
+      date: string;
+      proteins: number;
+      carbs: number;
+      fats: number;
+      calories: number;
+    }> = [];
+
+    // Générer les données pour les 90 derniers jours
+    const today = new Date();
+    for (let i = 89; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      const dateKey = date.toISOString().split('T')[0];
+
+      const dayMeals = meals[dateKey];
+      const nutrition = dayMeals?.totalNutrition;
+
+      data.push({
+        date: dateKey,
+        proteins: nutrition?.proteins || 0,
+        carbs: nutrition?.carbs || 0,
+        fats: nutrition?.fats || 0,
+        calories: nutrition?.calories || 0,
+      });
+    }
+
+    return data;
+  }, [meals]);
+
   // Meals status
   const mealSlots = [
     {
@@ -256,6 +289,14 @@ export default function HomePage() {
             proteins={{ current: currentProteins, target: targetProteins }}
             carbs={{ current: currentCarbs, target: targetCarbs }}
             fats={{ current: currentFats, target: targetFats }}
+            onViewDetails={() => router.push('/nutrition')}
+          />
+        </section>
+
+        {/* Macronutrients Chart */}
+        <section className="mt-6">
+          <MacronutrientsChartWidget
+            data={macroChartData}
             onViewDetails={() => router.push('/nutrition')}
           />
         </section>
